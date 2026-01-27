@@ -2,6 +2,8 @@
 
 Complete technical documentation for the real-time EV charging recommendation system.
 
+> **Navigation:** [README](../README.md) | [Workflow](WORKFLOW.md) | [API Reference](API_REFERENCE.md)
+
 ## Table of Contents
 
 1. [System Overview](#system-overview)
@@ -525,3 +527,7 @@ logger.info('recommendation_generated', {
 ---
 
 This documentation provides a complete technical reference for understanding, maintaining, and extending the EV Charging Platform backend.
+
+---
+
+> **Navigation:** [Back to README](../README.md) | [Workflow Documentation](WORKFLOW.md) | [API Reference](API_REFERENCE.md)

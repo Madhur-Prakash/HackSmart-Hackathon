@@ -4,15 +4,16 @@ A **production-grade, real-time backend system** for AI-powered EV charging stat
 
 ## 📋 Table of Contents
 
-- [Overview](#overview)
-- [Architecture](#architecture)
-- [Tech Stack](#tech-stack)
-- [Quick Start](#quick-start)
-- [API Documentation](#api-documentation)
-- [Services](#services)
-- [Configuration](#configuration)
-- [Deployment](#deployment)
-- [Development](#development)
+- [Overview](#-overview)
+- [Architecture](#️-architecture)
+- [Tech Stack](#️-tech-stack)
+- [Quick Start](#-quick-start)
+- [API Documentation](#-api-documentation)
+- [Services](#-services)
+- [Configuration](#️-configuration)
+- [Deployment](#-deployment)
+- [Development](#-development)
+- [Documentation](#-documentation)
 
 ---
 
@@ -523,7 +524,19 @@ curl http://localhost:3000/admin/summary
 
 ---
 
-## 📜 License
+## � Documentation
+
+For more detailed documentation, see:
+
+| Document | Description |
+|----------|-------------|
+| [Implementation Guide](docs/IMPLEMENTATION.md) | Technical implementation details, algorithms, caching strategies |
+| [Workflow Documentation](docs/WORKFLOW.md) | Data flow diagrams, sequence diagrams, error handling |
+| [API Reference](docs/API_REFERENCE.md) | Complete REST API documentation with examples |
+
+---
+
+## �📜 License
 
 MIT License - See LICENSE file for details.
 
