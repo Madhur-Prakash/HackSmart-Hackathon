@@ -126,7 +126,7 @@ This backend powers an intelligent EV charging recommendation platform that:
 
 ```bash
 npm install
-``` 
+```
 
 ### 2. Configure Environment
 
