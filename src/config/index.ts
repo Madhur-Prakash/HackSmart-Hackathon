@@ -57,10 +57,10 @@ export const config = {
     database: process.env.POSTGRES_DB || 'evplatform',
   },
 
-  // OpenAI Configuration
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY || '',
-    model: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
+  // Groq Configuration
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || '',
+    model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
   },
 
   // External AI Services

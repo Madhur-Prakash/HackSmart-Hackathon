@@ -45,7 +45,7 @@ The EV Charging Platform follows a microservices architecture with the following
 │   (Port 3001)    │    │   (Port 3005)    │    │   (Port 3006)    │
 │ • Station data   │    │ • User requests  │    │ • Explanations   │
 │ • Health data    │    │ • Selection/FB   │    │ • Admin summary  │
-│ • Grid status    │    │ • Caching        │    │ • OpenAI/Fallbk  │
+│ • Grid status    │    │ • Caching        │    │ • Groq/Fallback  │
 └────────┬─────────┘    └────────┬─────────┘    └──────────────────┘
          │                       │
          ▼                       ▼
@@ -199,7 +199,7 @@ Client App
 ┌──────────────────┐
 │   LLM Service    │
 │   • Explanation  │
-│   • OpenAI/Local │
+│   • Groq/Local   │
 └────────┬─────────┘
          │
          ▼

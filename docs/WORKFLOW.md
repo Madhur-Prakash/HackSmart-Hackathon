@@ -116,7 +116,7 @@ Complete end-to-end workflow documentation for the EV Charging Recommendation Pl
 ├──────────────────────────────────────────────────────────────┤
 │  1. Build context (top station, alternatives, metrics)       │
 │  2. Generate prompt from template                             │
-│  3. Call OpenAI API (with circuit breaker)                   │
+│  3. Call Groq API (with circuit breaker)                     │
 │  4. If API fails, use fallback template generator            │
 │  5. Return human-readable explanation                         │
 └────────────────────────┬─────────────────────────────────────┘

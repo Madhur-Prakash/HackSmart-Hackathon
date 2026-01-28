@@ -267,8 +267,8 @@ function calculateDistanceAdjustedScore(
          │
          ▼
 ┌─────────────────┐     No API Key    ┌──────────────────┐
-│   OpenAI API    │ ─────────────────▶│ Fallback Template│
-│   (GPT-4)       │                   │   Generator      │
+│   Groq API      │ ─────────────────▶│ Fallback Template│
+│   (LLaMA 3.3)   │                   │   Generator      │
 └────────┬────────┘                   └────────┬─────────┘
          │                                     │
          └─────────────┬───────────────────────┘
@@ -304,7 +304,7 @@ Generate a 2-3 sentence explanation focusing on practical benefits.
 
 ### Fallback Explanation Generator
 
-When OpenAI is unavailable, generates rule-based explanations:
+When Groq is unavailable, generates rule-based explanations:
 
 ```typescript
 function generateFallbackExplanation(context): string {

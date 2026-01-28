@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 import { config } from '../../config';
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { round, retry } from '../../utils/helpers';
@@ -6,9 +6,9 @@ import { RankedStation, RecommendationRequest, StationScore } from '../../types'
 
 const logger = createLogger('llm-service');
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: config.openai.apiKey,
+// Initialize Groq client
+const groq = new Groq({
+  apiKey: config.groq.apiKey,
 });
 
 /**
@@ -112,8 +112,8 @@ Generate a brief (3-4 sentence) executive summary that:
 export async function generateExplanation(context: ExplanationContext): Promise<string> {
   const startTime = Date.now();
 
-  // If no OpenAI key, use fallback
-  if (!config.openai.apiKey || config.openai.apiKey === 'your-openai-api-key-here') {
+  // If no Groq key, use fallback
+  if (!config.groq.apiKey || config.groq.apiKey === 'your-groq-api-key-here') {
     return generateFallbackExplanation(context);
   }
 
@@ -122,8 +122,8 @@ export async function generateExplanation(context: ExplanationContext): Promise<
 
     const response = await retry(
       async () => {
-        return openai.chat.completions.create({
-          model: config.openai.model,
+        return groq.chat.completions.create({
+          model: config.groq.model,
           messages: [
             {
               role: 'system',
@@ -146,7 +146,7 @@ export async function generateExplanation(context: ExplanationContext): Promise<
     const duration = Date.now() - startTime;
     logMetrics(logger, 'llm.explanation.latency', duration);
     logEvent(logger, 'explanation_generated', { 
-      method: 'openai',
+      method: 'groq',
       tokens: response.usage?.total_tokens 
     });
 
@@ -217,16 +217,16 @@ export async function generateAdminSummary(data: {
   topStations: Array<{ stationId: string; name: string; score: number }>;
   alertCount: number;
 }): Promise<string> {
-  // If no OpenAI key, use fallback
-  if (!config.openai.apiKey || config.openai.apiKey === 'your-openai-api-key-here') {
+  // If no Groq key, use fallback
+  if (!config.groq.apiKey || config.groq.apiKey === 'your-groq-api-key-here') {
     return generateFallbackAdminSummary(data);
   }
 
   try {
     const prompt = buildAdminSummaryPrompt(data);
 
-    const response = await openai.chat.completions.create({
-      model: config.openai.model,
+    const response = await groq.chat.completions.create({
+      model: config.groq.model,
       messages: [
         {
           role: 'system',

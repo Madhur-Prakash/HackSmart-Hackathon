@@ -79,7 +79,7 @@ A production-grade microservices backend for intelligent EV charging recommendat
 │   │                                     └───────────┬───────────────┘  │  │
 │   │                                                  │                  │  │
 │   │  ┌─────────────┐                                ▼                  │  │
-│   │  │  OpenAI /   │◀───────────────────┌───────────────────────────┐  │  │
+│   │  │   Groq /    │◀───────────────────┌───────────────────────────┐  │  │
 │   │  │  Mock AI    │                    │   Recommendation + LLM    │  │  │
 │   │  │   :8081     │                    │    :3005  │  :3006        │  │  │
 │   │  └─────────────┘                    └───────────────────────────┘  │  │
@@ -551,8 +551,8 @@ POSTGRES_DB=evplatform
 AI_PREDICTION_URL=http://localhost:8081/predict
 AI_DEMAND_URL=http://localhost:8081/demand
 
-# For production (use OpenAI)
-OPENAI_API_KEY=your-api-key-here
+# For production (use Groq)
+GROQ_API_KEY=your-api-key-here
 
 # ═══════════════════════════════════════════════════════════════
 # ⚖️ SCORING WEIGHTS (must sum to 1.0)
@@ -612,7 +612,8 @@ Password: admin123
 |----------|-------------|
 | [openspec.yml](openspec.yml) | OpenAPI 3.0 specification |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Complete API documentation |
-| [INTEGRATION.md](docs/INTEGRATION.md) | Integration guide & examples |
+| [FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md) | **Frontend developer guide with examples** |
+| [INTEGRATION.md](docs/INTEGRATION.md) | Backend integration guide |
 | [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Technical implementation details |
 | [WORKFLOW.md](docs/WORKFLOW.md) | Data flow & sequence diagrams |
 
