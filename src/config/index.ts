@@ -65,8 +65,8 @@ export const config = {
 
   // External AI Services
   aiServices: {
-    loadForecast: process.env.AI_LOAD_FORECAST_URL || 'http://localhost:8080/ai/load-forecast',
-    faultProbability: process.env.AI_FAULT_PROBABILITY_URL || 'http://localhost:8080/ai/fault-probability',
+    loadForecast: process.env.AI_LOAD_FORECAST_URL || 'http://localhost:8081/ai/load-forecast',
+    faultProbability: process.env.AI_FAULT_PROBABILITY_URL || 'http://localhost:8081/ai/fault-probability',
   },
 
   // Scoring Weights

@@ -22,7 +22,8 @@ info:
     | Optimization Service | 3004 | Route and charging optimization |
     | Recommendation Service | 3005 | Generates station recommendations |
     | LLM Service | 3006 | AI-powered summaries and insights |
-    | External AI (Mock) | 8080 | Load forecasting and fault prediction |
+    | External AI (Mock) | 8081 | Load forecasting and fault prediction |
+    | Kafka UI | 8082 | Kafka monitoring dashboard |
     
     ## Authentication
     Currently open for development. Production deployments should implement JWT/OAuth2.
@@ -47,8 +48,10 @@ servers:
     description: Recommendation Service
   - url: http://localhost:3006
     description: LLM Service
-  - url: http://localhost:8080
+  - url: http://localhost:8081
     description: External AI Service (Mock)
+  - url: http://localhost:8082
+    description: Kafka UI (monitoring)
   - url: https://api.ev-platform.com
     description: Production server (all services behind gateway)
 
@@ -68,7 +71,7 @@ tags:
   - name: Scoring
     description: Station scoring service (Port 3003)
   - name: AI
-    description: External AI prediction services (Port 8080)
+    description: External AI prediction services (Port 8081)
 
 paths:
   /health:
@@ -755,7 +758,7 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  # External AI Service Endpoints (Port 8080)
+  # External AI Service Endpoints (Port 8081)
   /ai/load-forecast:
     post:
       tags:
@@ -764,10 +767,10 @@ paths:
       description: |
         Get AI-powered load forecast prediction for a station.
         
-        **Service:** External AI Service (port 8080)
+        **Service:** External AI Service (port 8081)
       operationId: getLoadForecast
       servers:
-        - url: http://localhost:8080
+        - url: http://localhost:8081
           description: External AI Service (Mock)
       requestBody:
         required: true
@@ -808,10 +811,10 @@ paths:
       description: |
         Get AI-powered fault probability prediction for a station.
         
-        **Service:** External AI Service (port 8080)
+        **Service:** External AI Service (port 8081)
       operationId: getFaultProbability
       servers:
-        - url: http://localhost:8080
+        - url: http://localhost:8081
           description: External AI Service (Mock)
       requestBody:
         required: true
