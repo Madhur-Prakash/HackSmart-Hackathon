@@ -578,7 +578,6 @@ async function start(): Promise<void> {
 }
 
 // Export for testing
-export { createApiApp };
 
 // Start if run directly
 if (require.main === module) {
