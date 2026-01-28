@@ -24,6 +24,10 @@ COPY --from=builder /app/dist ./dist
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
+# ✅ Create logs folder + give permission
+RUN mkdir -p /app/logs && \
+    chown -R nodejs:nodejs /app
+
 USER nodejs
 
 CMD ["node", "dist/services/features/index.js"]

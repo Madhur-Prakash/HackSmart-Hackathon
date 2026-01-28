@@ -11,6 +11,19 @@ info:
     - Predictive load forecasting and fault detection
     - Admin dashboard with LLM-generated insights
     
+    ## Microservices Architecture
+    
+    | Service | Port | Description |
+    |---------|------|-------------|
+    | API Gateway | 3000 | Main entry point, proxies to other services |
+    | Ingestion Service | 3001 | Handles telemetry, health, grid, and user data ingestion |
+    | Features Service | 3002 | Feature engineering and processing |
+    | Scoring Service | 3003 | Station scoring calculations |
+    | Optimization Service | 3004 | Route and charging optimization |
+    | Recommendation Service | 3005 | Generates station recommendations |
+    | LLM Service | 3006 | AI-powered summaries and insights |
+    | External AI (Mock) | 8080 | Load forecasting and fault prediction |
+    
     ## Authentication
     Currently open for development. Production deployments should implement JWT/OAuth2.
   version: 1.0.0
@@ -21,21 +34,41 @@ info:
 
 servers:
   - url: http://localhost:3000
-    description: Development server
+    description: API Gateway (main entry point)
+  - url: http://localhost:3001
+    description: Ingestion Service
+  - url: http://localhost:3002
+    description: Features Service
+  - url: http://localhost:3003
+    description: Scoring Service
+  - url: http://localhost:3004
+    description: Optimization Service
+  - url: http://localhost:3005
+    description: Recommendation Service
+  - url: http://localhost:3006
+    description: LLM Service
+  - url: http://localhost:8080
+    description: External AI Service (Mock)
   - url: https://api.ev-platform.com
-    description: Production server
+    description: Production server (all services behind gateway)
 
 tags:
   - name: Health
     description: Health and readiness endpoints
   - name: Ingestion
-    description: Data ingestion endpoints for telemetry and user context
+    description: Data ingestion endpoints for telemetry and user context (Port 3001)
   - name: Recommendations
-    description: Station recommendation endpoints
+    description: Station recommendation endpoints (Port 3000/3005)
   - name: Stations
-    description: Station information endpoints
+    description: Station information endpoints (Port 3000)
   - name: Admin
-    description: Administrative and monitoring endpoints
+    description: Administrative and monitoring endpoints (Port 3000)
+  - name: Features
+    description: Feature engineering service (Port 3002)
+  - name: Scoring
+    description: Station scoring service (Port 3003)
+  - name: AI
+    description: External AI prediction services (Port 8080)
 
 paths:
   /health:
@@ -90,8 +123,16 @@ paths:
       tags:
         - Ingestion
       summary: Ingest station telemetry
-      description: Ingest real-time station telemetry data for processing
+      description: |
+        Ingest real-time station telemetry data for processing.
+        
+        **Service:** Ingestion Service (port 3001) or API Gateway (port 3000)
       operationId: ingestStationTelemetry
+      servers:
+        - url: http://localhost:3001
+          description: Ingestion Service (dedicated)
+        - url: http://localhost:3000
+          description: API Gateway (proxied)
       requestBody:
         required: true
         content:
@@ -130,8 +171,14 @@ paths:
       tags:
         - Ingestion
       summary: Batch ingest station telemetry
-      description: Ingest multiple station telemetry records at once
+      description: |
+        Ingest multiple station telemetry records at once.
+        
+        **Service:** Ingestion Service (port 3001) only
       operationId: batchIngestStationTelemetry
+      servers:
+        - url: http://localhost:3001
+          description: Ingestion Service (dedicated)
       requestBody:
         required: true
         content:
@@ -172,8 +219,16 @@ paths:
       tags:
         - Ingestion
       summary: Ingest user context
-      description: Ingest user context for personalized recommendations
+      description: |
+        Ingest user context for personalized recommendations.
+        
+        **Service:** Ingestion Service (port 3001) or API Gateway (port 3000)
       operationId: ingestUserContext
+      servers:
+        - url: http://localhost:3001
+          description: Ingestion Service (dedicated)
+        - url: http://localhost:3000
+          description: API Gateway (proxied)
       requestBody:
         required: true
         content:
@@ -207,6 +262,91 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/health:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest station health
+      description: |
+        Ingest station health data.
+        
+        **Service:** Ingestion Service (port 3001) only
+      operationId: ingestStationHealth
+      servers:
+        - url: http://localhost:3001
+          description: Ingestion Service (dedicated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StationHealth'
+            example:
+              stationId: ST_101
+              status: operational
+              lastMaintenanceDate: "2026-01-15"
+              uptimePercentage: 99.5
+              activeAlerts: []
+              healthScore: 95
+              timestamp: 1736500000
+      responses:
+        '202':
+          description: Health data accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: Health data ingested
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/grid:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest grid status
+      description: |
+        Ingest power grid status data.
+        
+        **Service:** Ingestion Service (port 3001) only
+      operationId: ingestGridStatus
+      servers:
+        - url: http://localhost:3001
+          description: Ingestion Service (dedicated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GridStatus'
+            example:
+              gridId: GRID_001
+              region: Bay Area
+              currentLoad: 450
+              maxCapacity: 600
+              loadPercentage: 75
+              peakHours: false
+              pricePerKwh: 0.25
+              timestamp: 1736500000
+      responses:
+        '202':
+          description: Grid status accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: Grid status ingested
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -612,6 +752,95 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SystemEventsResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # External AI Service Endpoints (Port 8080)
+  /ai/load-forecast:
+    post:
+      tags:
+        - AI
+      summary: Get load forecast prediction
+      description: |
+        Get AI-powered load forecast prediction for a station.
+        
+        **Service:** External AI Service (port 8080)
+      operationId: getLoadForecast
+      servers:
+        - url: http://localhost:8080
+          description: External AI Service (Mock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - stationId
+              properties:
+                stationId:
+                  type: string
+                  description: Station ID to predict load for
+                timestamp:
+                  type: integer
+                  format: int64
+                  description: Unix timestamp for prediction
+            example:
+              stationId: ST_101
+              timestamp: 1736500000
+      responses:
+        '200':
+          description: Load forecast prediction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadForecast'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ai/fault-probability:
+    post:
+      tags:
+        - AI
+      summary: Get fault probability prediction
+      description: |
+        Get AI-powered fault probability prediction for a station.
+        
+        **Service:** External AI Service (port 8080)
+      operationId: getFaultProbability
+      servers:
+        - url: http://localhost:8080
+          description: External AI Service (Mock)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - stationId
+              properties:
+                stationId:
+                  type: string
+                  description: Station ID to predict fault for
+                timestamp:
+                  type: integer
+                  format: int64
+                  description: Unix timestamp for prediction
+            example:
+              stationId: ST_101
+              timestamp: 1736500000
+      responses:
+        '200':
+          description: Fault probability prediction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaultPrediction'
+        '400':
+          $ref: '#/components/responses/ValidationError'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -1132,6 +1361,50 @@ components:
         timestamp:
           type: integer
           format: int64
+
+    GridStatus:
+      type: object
+      required:
+        - gridId
+        - region
+        - currentLoad
+        - maxCapacity
+        - loadPercentage
+        - peakHours
+        - pricePerKwh
+        - timestamp
+      properties:
+        gridId:
+          type: string
+          minLength: 1
+          description: Unique grid identifier
+        region:
+          type: string
+          description: Grid region name
+        currentLoad:
+          type: number
+          minimum: 0
+          description: Current load in kW
+        maxCapacity:
+          type: number
+          minimum: 1
+          description: Maximum capacity in kW
+        loadPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Load percentage (0-100)
+        peakHours:
+          type: boolean
+          description: Whether currently in peak hours
+        pricePerKwh:
+          type: number
+          minimum: 0
+          description: Current price per kWh
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp
 
     StationHealthResponse:
       type: object
