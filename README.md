@@ -687,7 +687,7 @@ These Kafka warnings during startup are normal. Wait a few seconds for the Kafka
 
 ## 📜 License
 
-MIT License - See [LICENSE](LICENSE) for details.
+Apache License 2.0 - See [LICENSE](LICENSE) for details.
 
 ---
 
