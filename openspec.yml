@@ -1,0 +1,1457 @@
+openapi: 3.0.3
+info:
+  title: EV Charging Platform API
+  description: |
+    Complete API for the EV Charging Platform - a real-time intelligent charging station 
+    recommendation system powered by AI predictions and feature engineering.
+    
+    ## Features
+    - Real-time station telemetry ingestion
+    - AI-powered charging station recommendations
+    - Predictive load forecasting and fault detection
+    - Admin dashboard with LLM-generated insights
+    
+    ## Authentication
+    Currently open for development. Production deployments should implement JWT/OAuth2.
+  version: 1.0.0
+  contact:
+    name: EV Platform Team
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.ev-platform.com
+    description: Production server
+
+tags:
+  - name: Health
+    description: Health and readiness endpoints
+  - name: Ingestion
+    description: Data ingestion endpoints for telemetry and user context
+  - name: Recommendations
+    description: Station recommendation endpoints
+  - name: Stations
+    description: Station information endpoints
+  - name: Admin
+    description: Administrative and monitoring endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      description: Basic health check endpoint to verify API and database status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: healthy
+                timestamp: "2026-01-27T10:00:00Z"
+                services:
+                  database: up
+                  api: up
+
+  /ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Kubernetes-compatible readiness probe
+      operationId: readinessCheck
+      responses:
+        '200':
+          description: System is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadyResponse'
+              example:
+                ready: true
+        '503':
+          description: System not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotReadyResponse'
+              example:
+                ready: false
+                reason: Database not available
+
+  /ingest/station:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest station telemetry
+      description: Ingest real-time station telemetry data for processing
+      operationId: ingestStationTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StationTelemetryInput'
+            example:
+              stationId: ST_101
+              queueLength: 5
+              avgServiceTime: 6
+              availableChargers: 4
+              totalChargers: 10
+              faultRate: 0.01
+              availablePower: 380
+              maxCapacity: 500
+      responses:
+        '202':
+          description: Telemetry accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IngestResponse'
+              example:
+                success: true
+                message: Telemetry ingested
+                stationId: ST_101
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/station/batch:
+    post:
+      tags:
+        - Ingestion
+      summary: Batch ingest station telemetry
+      description: Ingest multiple station telemetry records at once
+      operationId: batchIngestStationTelemetry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchStationTelemetryInput'
+            example:
+              stations:
+                - stationId: ST_101
+                  queueLength: 5
+                  availableChargers: 4
+                - stationId: ST_102
+                  queueLength: 2
+                  availableChargers: 8
+      responses:
+        '202':
+          description: Batch accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchIngestResponse'
+              example:
+                success: true
+                message: Batch ingested
+                stats:
+                  succeeded: 2
+                  failed: 0
+                  total: 2
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ingest/user-context:
+    post:
+      tags:
+        - Ingestion
+      summary: Ingest user context
+      description: Ingest user context for personalized recommendations
+      operationId: ingestUserContext
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserContext'
+            example:
+              userId: USR_001
+              sessionId: SES_abc123
+              currentLocation:
+                latitude: 37.7749
+                longitude: -122.4194
+              vehicleType: Tesla Model 3
+              batteryLevel: 25
+              preferredChargerType: fast
+              maxWaitTime: 15
+              maxDistance: 10
+              timestamp: 1736500000
+      responses:
+        '202':
+          description: User context accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserContextIngestResponse'
+              example:
+                success: true
+                message: User context ingested
+                userId: USR_001
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /recommend:
+    get:
+      tags:
+        - Recommendations
+      summary: Get recommendations (GET)
+      description: Get charging station recommendations based on query parameters
+      operationId: getRecommendations
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User identifier
+          example: USR_001
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -90
+            maximum: 90
+          description: User latitude
+          example: 37.7749
+        - name: lon
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+            minimum: -180
+            maximum: 180
+          description: User longitude
+          example: -122.4194
+        - name: vehicleType
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Vehicle type/model
+          example: Tesla Model 3
+        - name: batteryLevel
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+            maximum: 100
+          description: Battery percentage (0-100)
+          example: 25
+        - name: chargerType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [fast, standard, any]
+            default: any
+          description: Preferred charger type
+        - name: maxWaitTime
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+          description: Maximum acceptable wait time in minutes
+          example: 15
+        - name: maxDistance
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+          description: Maximum distance in kilometers
+          example: 10
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+          description: Number of recommendations to return
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags:
+        - Recommendations
+      summary: Get recommendations (POST)
+      description: Get charging station recommendations via POST request body
+      operationId: postRecommendations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecommendationRequest'
+            example:
+              userId: USR_001
+              location:
+                latitude: 37.7749
+                longitude: -122.4194
+              vehicleType: Tesla Model 3
+              batteryLevel: 25
+              preferredChargerType: fast
+              maxWaitTime: 15
+              maxDistance: 10
+              limit: 5
+      responses:
+        '200':
+          description: Recommendations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /recommend/{requestId}:
+    get:
+      tags:
+        - Recommendations
+      summary: Get cached recommendation
+      description: Retrieve a cached recommendation by request ID
+      operationId: getCachedRecommendation
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Recommendation request ID
+          example: REQ_abc123
+      responses:
+        '200':
+          description: Cached recommendation retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendationResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /recommend/{requestId}/select:
+    post:
+      tags:
+        - Recommendations
+      summary: Record station selection
+      description: Record when a user selects a station from recommendations
+      operationId: recordStationSelection
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Recommendation request ID
+          example: REQ_abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelectionInput'
+            example:
+              stationId: ST_101
+      responses:
+        '200':
+          description: Selection recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: Selection recorded
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /recommend/{requestId}/feedback:
+    post:
+      tags:
+        - Recommendations
+      summary: Submit recommendation feedback
+      description: Submit feedback on recommendation quality
+      operationId: submitFeedback
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Recommendation request ID
+          example: REQ_abc123
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FeedbackInput'
+            example:
+              rating: 5
+      responses:
+        '200':
+          description: Feedback recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+              example:
+                success: true
+                message: Feedback recorded
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /station/{id}/score:
+    get:
+      tags:
+        - Stations
+      summary: Get station score
+      description: Get real-time score for a specific station
+      operationId: getStationScore
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Station ID
+          example: ST_101
+      responses:
+        '200':
+          description: Station score retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationScoreResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /station/{id}/health:
+    get:
+      tags:
+        - Stations
+      summary: Get station health
+      description: Get health status for a station
+      operationId: getStationHealth
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Station ID
+          example: ST_101
+      responses:
+        '200':
+          description: Station health retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationHealthResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /station/{id}/predictions:
+    get:
+      tags:
+        - Stations
+      summary: Get station predictions
+      description: Get AI predictions (load forecast and fault prediction) for a station
+      operationId: getStationPredictions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Station ID
+          example: ST_101
+      responses:
+        '200':
+          description: Station predictions retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationPredictionsResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/summary:
+    get:
+      tags:
+        - Admin
+      summary: Get admin summary
+      description: Get system-wide summary for admin dashboard with LLM-generated narrative
+      operationId: getAdminSummary
+      responses:
+        '200':
+          description: Admin summary retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminSummaryResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/metrics:
+    get:
+      tags:
+        - Admin
+      summary: Get system metrics
+      description: Get detailed system metrics including Kafka, Redis, and API stats
+      operationId: getSystemMetrics
+      responses:
+        '200':
+          description: System metrics retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemMetricsResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/stations:
+    get:
+      tags:
+        - Admin
+      summary: List all stations
+      description: Get a list of all registered stations
+      operationId: listStations
+      responses:
+        '200':
+          description: Stations list retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StationsListResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/events:
+    get:
+      tags:
+        - Admin
+      summary: Get system events
+      description: Get system events log with optional filtering
+      operationId: getSystemEvents
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+          description: Maximum number of events to return
+        - name: severity
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [info, warning, error, critical]
+          description: Filter by severity level
+      responses:
+        '200':
+          description: System events retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemEventsResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  schemas:
+    # Common Schemas
+    GeoLocation:
+      type: object
+      required:
+        - latitude
+        - longitude
+      properties:
+        latitude:
+          type: number
+          format: double
+          minimum: -90
+          maximum: 90
+          description: Latitude coordinate
+        longitude:
+          type: number
+          format: double
+          minimum: -180
+          maximum: 180
+          description: Longitude coordinate
+
+    Alert:
+      type: object
+      required:
+        - id
+        - severity
+        - message
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Alert identifier
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Alert severity level
+        message:
+          type: string
+          description: Alert message
+        createdAt:
+          type: string
+          format: date-time
+          description: When the alert was created
+
+    # Health Schemas
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - services
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded]
+          description: Overall health status
+        timestamp:
+          type: string
+          format: date-time
+          description: Timestamp of health check
+        services:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [up, down]
+            api:
+              type: string
+              enum: [up, down]
+
+    ReadyResponse:
+      type: object
+      required:
+        - ready
+      properties:
+        ready:
+          type: boolean
+          description: Whether the system is ready
+
+    NotReadyResponse:
+      type: object
+      required:
+        - ready
+        - reason
+      properties:
+        ready:
+          type: boolean
+          example: false
+        reason:
+          type: string
+          description: Reason why system is not ready
+
+    # Ingestion Schemas
+    StationTelemetryInput:
+      type: object
+      required:
+        - stationId
+      properties:
+        stationId:
+          type: string
+          minLength: 1
+          description: Unique station identifier
+        queueLength:
+          type: integer
+          minimum: 0
+          description: Current queue length
+        avgServiceTime:
+          type: number
+          minimum: 0
+          description: Average service time in minutes
+        availableChargers:
+          type: integer
+          minimum: 0
+          description: Number of available chargers
+        totalChargers:
+          type: integer
+          minimum: 1
+          description: Total number of chargers
+        faultRate:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Fault rate (0-1)
+        availablePower:
+          type: number
+          minimum: 0
+          description: Available power in kW
+        maxCapacity:
+          type: number
+          minimum: 1
+          description: Maximum capacity in kW
+
+    BatchStationTelemetryInput:
+      type: object
+      required:
+        - stations
+      properties:
+        stations:
+          type: array
+          items:
+            $ref: '#/components/schemas/StationTelemetryInput'
+          description: Array of station telemetry records
+
+    IngestResponse:
+      type: object
+      required:
+        - success
+        - message
+        - stationId
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        stationId:
+          type: string
+
+    BatchIngestResponse:
+      type: object
+      required:
+        - success
+        - message
+        - stats
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        stats:
+          type: object
+          properties:
+            succeeded:
+              type: integer
+            failed:
+              type: integer
+            total:
+              type: integer
+
+    UserContext:
+      type: object
+      required:
+        - userId
+        - sessionId
+        - currentLocation
+        - vehicleType
+        - batteryLevel
+        - preferredChargerType
+        - maxWaitTime
+        - maxDistance
+        - timestamp
+      properties:
+        userId:
+          type: string
+          minLength: 1
+          description: User identifier
+        sessionId:
+          type: string
+          minLength: 1
+          description: Session identifier
+        currentLocation:
+          $ref: '#/components/schemas/GeoLocation'
+        vehicleType:
+          type: string
+          description: Vehicle model/type
+        batteryLevel:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Battery percentage
+        preferredChargerType:
+          type: string
+          enum: [fast, standard, any]
+          description: Preferred charger type
+        maxWaitTime:
+          type: number
+          minimum: 0
+          description: Maximum wait time in minutes
+        maxDistance:
+          type: number
+          minimum: 0
+          description: Maximum distance in kilometers
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp
+
+    UserContextIngestResponse:
+      type: object
+      required:
+        - success
+        - message
+        - userId
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        userId:
+          type: string
+
+    # Recommendation Schemas
+    RecommendationRequest:
+      type: object
+      required:
+        - userId
+        - location
+      properties:
+        userId:
+          type: string
+          minLength: 1
+          description: User identifier
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+        vehicleType:
+          type: string
+          description: Vehicle type/model
+        batteryLevel:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Battery percentage
+        preferredChargerType:
+          type: string
+          enum: [fast, standard, any]
+          description: Preferred charger type
+        maxWaitTime:
+          type: number
+          minimum: 0
+          description: Maximum wait time in minutes
+        maxDistance:
+          type: number
+          minimum: 0
+          description: Maximum distance in kilometers
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 20
+          default: 5
+          description: Number of recommendations to return
+
+    StationFeatures:
+      type: object
+      properties:
+        stationId:
+          type: string
+        effectiveWaitTime:
+          type: number
+        stationReliabilityScore:
+          type: number
+        energyStabilityIndex:
+          type: number
+        chargerAvailabilityRatio:
+          type: number
+        distancePenalty:
+          type: number
+
+    LoadForecast:
+      type: object
+      properties:
+        stationId:
+          type: string
+        predictedLoad:
+          type: number
+        confidence:
+          type: number
+        peakTimeStart:
+          type: string
+        peakTimeEnd:
+          type: string
+        timestamp:
+          type: integer
+          format: int64
+
+    FaultPrediction:
+      type: object
+      properties:
+        stationId:
+          type: string
+        faultProbability:
+          type: number
+        predictedFaultType:
+          type: string
+          nullable: true
+        riskLevel:
+          type: string
+          enum: [low, medium, high]
+        confidence:
+          type: number
+        timestamp:
+          type: integer
+          format: int64
+
+    RankedStation:
+      type: object
+      properties:
+        stationId:
+          type: string
+        stationName:
+          type: string
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+        address:
+          type: string
+        score:
+          type: number
+        rank:
+          type: integer
+        estimatedWaitTime:
+          type: number
+        estimatedDistance:
+          type: number
+        availableChargers:
+          type: integer
+        chargerTypes:
+          type: array
+          items:
+            type: string
+        pricePerKwh:
+          type: number
+        features:
+          $ref: '#/components/schemas/StationFeatures'
+        predictions:
+          type: object
+          properties:
+            load:
+              $ref: '#/components/schemas/LoadForecast'
+            fault:
+              $ref: '#/components/schemas/FaultPrediction'
+
+    Recommendation:
+      type: object
+      properties:
+        requestId:
+          type: string
+        userId:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RankedStation'
+        explanation:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    RecommendationResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/Recommendation'
+        meta:
+          type: object
+          properties:
+            processingTime:
+              type: integer
+              description: Processing time in milliseconds
+            cacheHit:
+              type: boolean
+              description: Whether result was from cache
+
+    SelectionInput:
+      type: object
+      required:
+        - stationId
+      properties:
+        stationId:
+          type: string
+          description: Selected station ID
+
+    FeedbackInput:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Rating from 1 to 5
+
+    SuccessResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    # Station Schemas
+    ComponentScores:
+      type: object
+      properties:
+        waitTimeScore:
+          type: number
+        availabilityScore:
+          type: number
+        reliabilityScore:
+          type: number
+        distanceScore:
+          type: number
+        energyStabilityScore:
+          type: number
+
+    StationScore:
+      type: object
+      properties:
+        stationId:
+          type: string
+        overallScore:
+          type: number
+        componentScores:
+          $ref: '#/components/schemas/ComponentScores'
+        rank:
+          type: integer
+        confidence:
+          type: number
+        timestamp:
+          type: integer
+          format: int64
+
+    StationScoreResponse:
+      type: object
+      required:
+        - success
+        - data
+        - meta
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/StationScore'
+        meta:
+          type: object
+          properties:
+            timestamp:
+              type: integer
+              format: int64
+            freshness:
+              type: string
+              enum: [live, cached]
+
+    StationHealth:
+      type: object
+      properties:
+        stationId:
+          type: string
+        status:
+          type: string
+          enum: [operational, degraded, offline, maintenance]
+        lastMaintenanceDate:
+          type: string
+          format: date
+        uptimePercentage:
+          type: number
+        activeAlerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Alert'
+        healthScore:
+          type: number
+        timestamp:
+          type: integer
+          format: int64
+
+    StationHealthResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/StationHealth'
+
+    StationPredictionsResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            loadForecast:
+              $ref: '#/components/schemas/LoadForecast'
+            faultPrediction:
+              $ref: '#/components/schemas/FaultPrediction'
+
+    Station:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        address:
+          type: string
+        location:
+          $ref: '#/components/schemas/GeoLocation'
+        totalChargers:
+          type: integer
+        chargerTypes:
+          type: array
+          items:
+            type: string
+        maxCapacity:
+          type: number
+        operatingHours:
+          type: string
+        amenities:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    StationsListResponse:
+      type: object
+      required:
+        - success
+        - data
+        - count
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Station'
+        count:
+          type: integer
+
+    # Admin Schemas
+    TopStation:
+      type: object
+      properties:
+        stationId:
+          type: string
+        name:
+          type: string
+        recommendationCount:
+          type: integer
+
+    AdminSummary:
+      type: object
+      properties:
+        totalStations:
+          type: integer
+        operationalStations:
+          type: integer
+        degradedStations:
+          type: integer
+        offlineStations:
+          type: integer
+        totalActiveUsers:
+          type: integer
+        recommendationsToday:
+          type: integer
+        avgResponseTime:
+          type: number
+        cacheHitRatio:
+          type: number
+        topStations:
+          type: array
+          items:
+            $ref: '#/components/schemas/TopStation'
+        systemHealth:
+          type: string
+          enum: [healthy, degraded, critical]
+
+    AdminSummaryResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/AdminSummary'
+        narrative:
+          type: string
+          description: LLM-generated narrative summary
+
+    ServiceStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [up, down, degraded]
+        lastHeartbeat:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+
+    TopicStats:
+      type: object
+      properties:
+        messages:
+          type: integer
+        lag:
+          type: integer
+
+    SystemMetrics:
+      type: object
+      properties:
+        kafka:
+          type: object
+          properties:
+            consumerLag:
+              type: integer
+            messagesPerSecond:
+              type: number
+            topicStats:
+              type: object
+              additionalProperties:
+                $ref: '#/components/schemas/TopicStats'
+        redis:
+          type: object
+          properties:
+            hitRatio:
+              type: number
+            memoryUsage:
+              type: integer
+            connectedClients:
+              type: integer
+        api:
+          type: object
+          properties:
+            requestsPerSecond:
+              type: number
+            avgLatency:
+              type: number
+            errorRate:
+              type: number
+        services:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ServiceStatus'
+
+    SystemMetricsResponse:
+      type: object
+      required:
+        - success
+        - data
+      properties:
+        success:
+          type: boolean
+        data:
+          $ref: '#/components/schemas/SystemMetrics'
+
+    SystemEvent:
+      type: object
+      properties:
+        id:
+          type: integer
+        eventType:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error, critical]
+        message:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    SystemEventsResponse:
+      type: object
+      required:
+        - success
+        - data
+        - count
+      properties:
+        success:
+          type: boolean
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SystemEvent'
+        count:
+          type: integer
+
+    # Error Schemas
+    ValidationError:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Validation failed
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              path:
+                type: string
+              message:
+                type: string
+
+    ApiError:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+  responses:
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            success: false
+            error: Validation failed
+            details:
+              - path: stationId
+                message: Required
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error: Not found
+            message: Resource not found
+
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error: Too many requests, please try again later
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            success: false
+            error: Internal server error
+            timestamp: "2026-01-27T10:00:00Z"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token authentication (for future production use)
