@@ -1,7 +1,7 @@
 import { config } from './config';
 import { createLogger } from './utils/logger';
 import { createApiApp } from './services/api';
-import { runMigrations } from './db';
+import { runMigrations, seedDatabase } from './db';
 import { createTopics } from './kafka';
 import { getRedisClient, closeRedis } from './redis';
 import { closeDb, systemEventRepository } from './db';
@@ -27,6 +27,11 @@ async function bootstrap(): Promise<void> {
     logger.info('Running database migrations...');
     await runMigrations();
     logger.info('Database migrations complete');
+
+    // Seed database with initial data
+    logger.info('Seeding database...');
+    await seedDatabase();
+    logger.info('Database seeding complete');
 
     // Create Kafka topics
     logger.info('Setting up Kafka topics...');
