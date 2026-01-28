@@ -1,116 +1,93 @@
-# 🔋 EV Charging Platform - Real-Time Recommendation Backend
+# ⚡ EV Charging Platform
 
-A **production-grade, real-time backend system** for AI-powered EV charging station recommendations.
+> **Real-Time AI-Powered EV Charging Station Recommendation System**
 
-## 📋 Table of Contents
+A production-grade microservices backend for intelligent EV charging recommendations with real-time data processing, multi-objective optimization, and LLM-powered explanations.
 
-- [Overview](#-overview)
-- [Architecture](#️-architecture)
-- [Tech Stack](#️-tech-stack)
-- [Quick Start](#-quick-start)
-- [API Documentation](#-api-documentation)
-- [Services](#-services)
-- [Configuration](#️-configuration)
-- [Deployment](#-deployment)
-- [Development](#-development)
-- [Documentation](#-documentation)
+<p align="center">
+  <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
+  <img src="https://img.shields.io/badge/Kafka-2.x-231F20?style=for-the-badge&logo=apachekafka&logoColor=white" />
+  <img src="https://img.shields.io/badge/Redis-7+-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+</p>
 
 ---
 
-## 🎯 Overview
+## 📑 Table of Contents
 
-This backend powers an intelligent EV charging recommendation platform that:
+- [✨ Features](#-features)
+- [🏗️ Architecture](#️-architecture)
+- [🚀 Quick Start](#-quick-start)
+  - [Option 1: Local Development](#option-1-local-development-recommended)
+  - [Option 2: Full Docker](#option-2-full-docker-deployment)
+- [🔌 Services & Ports](#-services--ports)
+- [📡 API Reference](#-api-reference)
+- [🛠️ Development](#️-development)
+- [⚙️ Configuration](#️-configuration)
+- [📊 Monitoring & Tools](#-monitoring--tools)
+- [📚 Documentation](#-documentation)
 
-- **Ingests real-time data** from IoT devices and external APIs
-- **Engineers features** on-the-fly for scoring
-- **Scores stations** using multi-objective optimization
-- **Optimizes recommendations** with constraint handling
-- **Explains decisions** using LLM integration
-- **Serves mobile apps** and admin dashboards via REST APIs
+---
 
-### Key Features
+## ✨ Features
 
-✅ Real-time streaming with Kafka  
-✅ In-memory caching with Redis  
-✅ PostgreSQL for persistence  
-✅ Multi-objective scoring engine  
-✅ LLM-powered explanations  
-✅ Circuit breakers for resilience  
-✅ Docker-ready deployment  
-✅ Comprehensive monitoring
+| Feature | Description |
+|---------|-------------|
+| 🔄 **Real-Time Streaming** | Apache Kafka for high-throughput event processing |
+| ⚡ **In-Memory Caching** | Redis for sub-millisecond response times |
+| 🧠 **AI-Powered Scoring** | Multi-objective optimization with ML predictions |
+| 💬 **LLM Explanations** | GPT-4 powered human-readable recommendations |
+| 🛡️ **Resilient Design** | Circuit breakers, retries, and graceful degradation |
+| 📈 **Auto-Scaling Ready** | Microservices architecture for independent scaling |
+| 🐳 **Docker Native** | Full containerization with docker-compose |
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        EV Charging Platform                          │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│  ┌──────────┐    ┌──────────────┐    ┌──────────────────────────┐  │
-│  │   IoT    │───▶│    Kafka     │───▶│    Ingestion Service     │  │
-│  │ Devices  │    │   Broker     │    │                          │  │
-│  └──────────┘    └──────────────┘    └────────────┬─────────────┘  │
-│                         │                          │                 │
-│  ┌──────────┐          │                          ▼                 │
-│  │ External │          │            ┌──────────────────────────┐   │
-│  │   APIs   │──────────┴───────────▶│  Feature Engineering     │   │
-│  └──────────┘                       │      Service             │   │
-│                                     └────────────┬─────────────┘   │
-│                                                  │                  │
-│                                                  ▼                  │
-│  ┌──────────┐              ┌──────────────────────────────────┐    │
-│  │  Redis   │◀────────────▶│    Real-Time Scoring Engine      │    │
-│  │  Cache   │              └────────────┬─────────────────────┘    │
-│  └──────────┘                           │                          │
-│                                         ▼                          │
-│  ┌──────────┐              ┌──────────────────────────────────┐    │
-│  │PostgreSQL│◀────────────▶│    Optimization Engine           │    │
-│  │    DB    │              └────────────┬─────────────────────┘    │
-│  └──────────┘                           │                          │
-│                                         ▼                          │
-│                            ┌──────────────────────────────────┐    │
-│                            │   Recommendation Service         │    │
-│                            └────────────┬─────────────────────┘    │
-│                                         │                          │
-│  ┌──────────┐                          ▼                          │
-│  │  OpenAI  │◀─────────────┌──────────────────────────────────┐   │
-│  │   LLM    │              │    LLM Explanation Layer          │   │
-│  └──────────┘              └────────────┬─────────────────────┘   │
-│                                         │                          │
-│                                         ▼                          │
-│                            ┌──────────────────────────────────┐    │
-│                            │       REST API Gateway           │    │
-│                            │   (Public + Admin Endpoints)     │    │
-│                            └──────────────────────────────────┘    │
-│                                         │                          │
-└─────────────────────────────────────────┼──────────────────────────┘
-                                          │
-                                          ▼
-                            ┌──────────────────────────┐
-                            │   Mobile Apps / Web UI    │
-                            │     Admin Dashboard       │
-                            └──────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          EV CHARGING PLATFORM                               │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│   📱 Mobile App / 🖥️ Web Dashboard                                         │
+│              │                                                              │
+│              ▼                                                              │
+│   ┌─────────────────────────────────────────────────────────────────────┐  │
+│   │                    🌐 API Gateway (Port 3000)                        │  │
+│   │         /recommend  │  /ingest/*  │  /admin/*  │  /health           │  │
+│   └─────────────────────────────────────────────────────────────────────┘  │
+│              │                                                              │
+│   ┌──────────┴──────────────────────────────────────────────────────────┐  │
+│   │                                                                      │  │
+│   │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐  │  │
+│   │  │  Ingestion  │───▶│   Kafka     │───▶│  Feature Engineering    │  │  │
+│   │  │   :3001     │    │   :9092     │    │        :3002            │  │  │
+│   │  └─────────────┘    └─────────────┘    └───────────┬─────────────┘  │  │
+│   │                                                     │                │  │
+│   │                                                     ▼                │  │
+│   │  ┌─────────────┐                     ┌─────────────────────────────┐│  │
+│   │  │   Redis     │◀───────────────────▶│     Scoring Engine         ││  │
+│   │  │   :6379     │                     │         :3003              ││  │
+│   │  └─────────────┘                     └───────────┬─────────────────┘│  │
+│   │                                                   │                  │  │
+│   │  ┌─────────────┐                                 ▼                  │  │
+│   │  │ PostgreSQL  │◀───────────────────┌───────────────────────────┐  │  │
+│   │  │   :5432     │                    │   Optimization Engine     │  │  │
+│   │  └─────────────┘                    │        :3004              │  │  │
+│   │                                     └───────────┬───────────────┘  │  │
+│   │                                                  │                  │  │
+│   │  ┌─────────────┐                                ▼                  │  │
+│   │  │  OpenAI /   │◀───────────────────┌───────────────────────────┐  │  │
+│   │  │  Mock AI    │                    │   Recommendation + LLM    │  │  │
+│   │  │   :8081     │                    │    :3005  │  :3006        │  │  │
+│   │  └─────────────┘                    └───────────────────────────┘  │  │
+│   │                                                                      │  │
+│   └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
-
----
-
-## 🛠️ Tech Stack
-
-| Component | Technology |
-|-----------|------------|
-| Runtime | Node.js 18+ |
-| Language | TypeScript 5.x |
-| Web Framework | Express.js |
-| Message Queue | Apache Kafka |
-| Cache | Redis 7 |
-| Database | PostgreSQL 15 |
-| LLM | OpenAI GPT-4 |
-| Containerization | Docker + Docker Compose |
-| Resilience | Cockatiel (Circuit Breakers) |
-| Validation | Zod |
-| Logging | Winston |
 
 ---
 
@@ -118,56 +95,74 @@ This backend powers an intelligent EV charging recommendation platform that:
 
 ### Prerequisites
 
-- Node.js 18+
-- Docker & Docker Compose
-- Git
+- **Node.js** 18+ ([Download](https://nodejs.org/))
+- **Docker Desktop** ([Download](https://www.docker.com/products/docker-desktop/))
+- **Git** ([Download](https://git-scm.com/))
 
-### 1. Clone & Install
+---
+
+### Option 1: Local Development (Recommended)
+
+Run infrastructure in Docker, services locally for hot-reload development.
 
 ```bash
+# 1️⃣ Install dependencies
 npm install
-```
 
-### 2. Configure Environment
-
-```bash
+# 2️⃣ Copy environment file
 cp .env.example .env
-# Edit .env with your settings
-```
 
-### 3. Start Infrastructure
+# 3️⃣ Start infrastructure (Kafka, Redis, PostgreSQL)
+npm run infra:up
 
-```bash
-docker-compose up -d zookeeper kafka redis postgres
-```
+# 4️⃣ Wait for infrastructure to be ready (~30 seconds)
+#    Check status: docker ps
 
-### 4. Run Migrations
-
-```bash
-npm run migrate
-npm run seed
-```
-
-### 5. Create Kafka Topics
-
-```bash
-npm run kafka:topics
-```
-
-### 6. Start the Application
-
-```bash
-# Development mode
+# 5️⃣ Start all services with hot-reload
 npm run dev
-
-# Or start individual services
-npm run dev:api
-npm run dev:ingestion
-npm run dev:features
-npm run dev:scoring
 ```
 
-### 7. Test the API
+**What starts:**
+
+| Service | Port | Color in Terminal |
+|---------|------|-------------------|
+| API Gateway | 3000 | 🔵 Blue |
+| Ingestion | 3001 | 🟢 Green |
+| Features | 3002 | 🟡 Yellow |
+| Scoring | 3003 | 🟣 Magenta |
+| Optimization | 3004 | 🔵 Cyan |
+| Recommendation | 3005 | 🔴 Red |
+| LLM | 3006 | ⚪ White |
+| Mock AI | 8081 | ⬜ Gray |
+
+**Stop everything:**
+
+```bash
+# Stop Node.js services: Ctrl+C
+# Stop infrastructure:
+npm run infra:down
+```
+
+---
+
+### Option 2: Full Docker Deployment
+
+Run everything in Docker containers.
+
+```bash
+# 1️⃣ Start all services
+docker-compose up -d
+
+# 2️⃣ View logs
+docker-compose logs -f
+
+# 3️⃣ Stop everything
+docker-compose down
+```
+
+---
+
+### 🧪 Verify Installation
 
 ```bash
 # Health check
@@ -177,24 +172,149 @@ curl http://localhost:3000/health
 curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 ```
 
+**Expected Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "recommendations": [...],
+    "explanation": "Station X is recommended because..."
+  }
+}
+```
+
 ---
 
-## 📡 API Documentation
+## 🔌 Services & Ports
 
-### Public Endpoints
+### Application Services
 
-#### POST `/ingest/station`
-Ingest station telemetry data.
+| Service | Port | Description |
+|---------|------|-------------|
+| **API Gateway** | `3000` | Main REST API, handles all public/admin requests |
+| **Ingestion** | `3001` | Receives IoT telemetry, validates & publishes to Kafka |
+| **Features** | `3002` | Real-time feature engineering from telemetry |
+| **Scoring** | `3003` | Multi-objective station scoring engine |
+| **Optimization** | `3004` | Constraint handling & Top-K selection |
+| **Recommendation** | `3005` | Orchestrates recommendation flow |
+| **LLM** | `3006` | Generates human-readable explanations |
+| **Mock AI** | `8081` | Local AI service for development |
+
+### Infrastructure Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| **PostgreSQL** | `5432` | Primary database |
+| **Redis** | `6379` | Caching & real-time data |
+| **Kafka** | `9092` | Message broker |
+| **Zookeeper** | `2181` | Kafka coordination |
+
+### Management UIs
+
+| Tool | URL | Credentials |
+|------|-----|-------------|
+| **RedisInsight** | http://localhost:8001 | No auth required |
+| **Kafka UI** | http://localhost:8082 | No auth required |
+| **pgAdmin** | http://localhost:5050 | `admin@gmail.com` / `admin123` |
+
+---
+
+## 📡 API Reference
+
+### Quick Reference
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Service health check |
+| `GET` | `/recommend` | Get station recommendations |
+| `POST` | `/ingest/station` | Ingest station telemetry |
+| `POST` | `/ingest/station/batch` | Batch ingest (port 3001) |
+| `POST` | `/ingest/user-context` | Ingest user context |
+| `GET` | `/station/:id/score` | Get station score |
+| `GET` | `/station/:id/health` | Get station health |
+| `GET` | `/admin/summary` | System summary with LLM narrative |
+| `GET` | `/admin/metrics` | Detailed system metrics |
+
+---
+
+### 🎯 Get Recommendations
+
+```http
+GET /recommend?userId={userId}&lat={latitude}&lon={longitude}
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|:--------:|-------------|
+| `userId` | string | ✅ | User identifier |
+| `lat` | number | ✅ | Latitude (-90 to 90) |
+| `lon` | number | ✅ | Longitude (-180 to 180) |
+| `vehicleType` | string | ❌ | e.g., "Tesla Model 3" |
+| `batteryLevel` | number | ❌ | Current battery % (0-100) |
+| `chargerType` | string | ❌ | `fast` / `standard` / `any` |
+| `maxWaitTime` | number | ❌ | Max wait in minutes |
+| `maxDistance` | number | ❌ | Max distance in km |
+| `limit` | number | ❌ | Results count (default: 5) |
+
+**Example:**
+
+```bash
+curl "http://localhost:3000/recommend?userId=USR_001&lat=37.7749&lon=-122.4194&limit=3"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "requestId": "REQ_abc123",
+    "userId": "USR_001",
+    "recommendations": [
+      {
+        "stationId": "ST_101",
+        "stationName": "Downtown EV Hub",
+        "score": 0.87,
+        "rank": 1,
+        "estimatedWaitTime": 5,
+        "estimatedDistance": 2.3,
+        "availableChargers": 8,
+        "chargerTypes": ["CCS", "CHAdeMO"],
+        "pricePerKwh": 0.30
+      }
+    ],
+    "explanation": "Downtown EV Hub is recommended because it's closest with minimal wait time.",
+    "generatedAt": "2026-01-28T10:00:00Z"
+  },
+  "meta": {
+    "processingTime": 145,
+    "cacheHit": false
+  }
+}
+```
+
+---
+
+### 📤 Ingest Station Telemetry
+
+```http
+POST /ingest/station
+Content-Type: application/json
+```
+
+**Request Body:**
 
 ```json
 {
   "stationId": "ST_101",
-  "queueLength": 5,
-  "avgServiceTime": 6,
-  "availableChargers": 4,
-  "totalChargers": 10,
+  "queueLength": 3,
+  "avgServiceTime": 5,
+  "availableChargers": 8,
+  "totalChargers": 12,
   "faultRate": 0.01,
-  "availablePower": 380,
+  "availablePower": 450,
   "maxCapacity": 500
 }
 ```
@@ -203,8 +323,36 @@ Ingest station telemetry data.
 
 ---
 
-#### POST `/ingest/user-context`
-Ingest user context for personalized recommendations.
+### 📤 Batch Ingest (Ingestion Service Only)
+
+> ⚠️ **Note:** This endpoint is only available on the Ingestion Service port (3001)
+
+```http
+POST http://localhost:3001/ingest/station/batch
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "stations": [
+    { "stationId": "ST_101", "queueLength": 3, "..." : "..." },
+    { "stationId": "ST_102", "queueLength": 5, "..." : "..." }
+  ]
+}
+```
+
+---
+
+### 👤 Ingest User Context
+
+```http
+POST /ingest/user-context
+Content-Type: application/json
+```
+
+**Request Body:**
 
 ```json
 {
@@ -218,106 +366,22 @@ Ingest user context for personalized recommendations.
   "batteryLevel": 25,
   "preferredChargerType": "fast",
   "maxWaitTime": 15,
-  "maxDistance": 10,
-  "timestamp": 1736500000
+  "maxDistance": 10
 }
 ```
 
 ---
 
-#### GET `/recommend`
-Get station recommendations.
+### 📊 Admin Endpoints
 
-**Query Parameters:**
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `userId` | string | Yes | User identifier |
-| `lat` | number | Yes | Latitude |
-| `lon` | number | Yes | Longitude |
-| `vehicleType` | string | No | Vehicle type |
-| `batteryLevel` | number | No | Battery % (0-100) |
-| `chargerType` | string | No | fast/standard/any |
-| `maxWaitTime` | number | No | Max wait in minutes |
-| `maxDistance` | number | No | Max distance in km |
-| `limit` | number | No | Results count (default: 5) |
+#### Get System Summary
 
-**Example:**
 ```bash
-curl "http://localhost:3000/recommend?userId=USR_001&lat=37.7749&lon=-122.4194&limit=5"
+curl http://localhost:3000/admin/summary
 ```
 
 **Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "requestId": "REQ_abc123",
-    "userId": "USR_001",
-    "recommendations": [
-      {
-        "stationId": "ST_101",
-        "stationName": "Downtown EV Hub",
-        "location": { "latitude": 37.7749, "longitude": -122.4194 },
-        "address": "123 Main Street",
-        "score": 0.87,
-        "rank": 1,
-        "estimatedWaitTime": 5,
-        "estimatedDistance": 2.3,
-        "availableChargers": 8,
-        "chargerTypes": ["CCS", "CHAdeMO", "Type2"],
-        "pricePerKwh": 0.30
-      }
-    ],
-    "explanation": "Downtown EV Hub is recommended because it's only 2.3 km away with minimal wait time (5 minutes) and has 8 chargers available.",
-    "generatedAt": "2026-01-27T10:00:00Z",
-    "expiresAt": "2026-01-27T10:05:00Z"
-  },
-  "meta": {
-    "processingTime": 145,
-    "cacheHit": false
-  }
-}
-```
 
----
-
-### Admin Endpoints
-
-#### GET `/station/:id/score`
-Get real-time score for a station.
-
-**Response:**
-```json
-{
-  "success": true,
-  "data": {
-    "stationId": "ST_101",
-    "overallScore": 0.87,
-    "componentScores": {
-      "waitTimeScore": 0.92,
-      "availabilityScore": 0.85,
-      "reliabilityScore": 0.95,
-      "distanceScore": 0.78,
-      "energyStabilityScore": 0.88
-    },
-    "rank": 1,
-    "confidence": 0.95,
-    "timestamp": 1736500000
-  }
-}
-```
-
----
-
-#### GET `/station/:id/health`
-Get station health status.
-
----
-
-#### GET `/admin/summary`
-Get system-wide admin summary with LLM narrative.
-
-**Response:**
 ```json
 {
   "success": true,
@@ -332,90 +396,167 @@ Get system-wide admin summary with LLM narrative.
     "cacheHitRatio": 0.85,
     "systemHealth": "healthy"
   },
-  "narrative": "Network status is healthy with 90% of stations operational..."
+  "narrative": "Network operating normally with 90% stations online..."
+}
+```
+
+#### Get Station Score
+
+```bash
+curl http://localhost:3000/station/ST_101/score
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "stationId": "ST_101",
+    "overallScore": 0.87,
+    "componentScores": {
+      "waitTimeScore": 0.92,
+      "availabilityScore": 0.85,
+      "reliabilityScore": 0.95,
+      "distanceScore": 0.78,
+      "energyStabilityScore": 0.88
+    },
+    "rank": 1,
+    "confidence": 0.95
+  }
 }
 ```
 
 ---
 
-#### GET `/admin/metrics`
-Get detailed system metrics.
+## 🛠️ Development
+
+### NPM Scripts
+
+| Script | Description |
+|--------|-------------|
+| `npm run dev` | 🚀 Start all services with hot-reload |
+| `npm run dev:api` | Start only API Gateway |
+| `npm run dev:ingestion` | Start only Ingestion Service |
+| `npm run dev:features` | Start only Feature Engineering |
+| `npm run dev:scoring` | Start only Scoring Engine |
+| `npm run dev:optimization` | Start only Optimization Engine |
+| `npm run dev:recommendation` | Start only Recommendation Service |
+| `npm run dev:llm` | Start only LLM Service |
+| `npm run dev:mock-ai` | Start Mock AI Server |
+| `npm run infra:up` | 🐳 Start infrastructure in Docker |
+| `npm run infra:down` | 🛑 Stop infrastructure |
+| `npm run infra:logs` | 📋 View infrastructure logs |
+| `npm run build` | 🔨 Compile TypeScript |
+| `npm run migrate` | 📦 Run database migrations |
+| `npm run seed` | 🌱 Seed database with sample data |
+| `npm run kafka:topics` | 📫 Create Kafka topics |
+| `npm test` | 🧪 Run tests |
+| `npm run lint` | 🔍 Run ESLint |
 
 ---
 
-## 🔧 Services
+### Project Structure
 
-### Ingestion Service
-- Receives telemetry from IoT devices
-- Validates incoming data
-- Publishes to Kafka topics
-- Caches latest values in Redis
-
-### Feature Engineering Service
-- Consumes telemetry from Kafka
-- Calculates derived features:
-  - `effective_wait_time = queueLength × avgServiceTime`
-  - `reliability_score = 1 - faultRate`
-  - `energy_stability = availablePower / maxCapacity`
-  - `availability_ratio = availableChargers / totalChargers`
-- Normalizes features to 0-1 range
-- Publishes engineered features
-
-### Scoring Engine
-- Consumes engineered features
-- Applies multi-objective scoring:
-  ```
-  Score = w1×waitTime + w2×availability + w3×reliability + w4×distance + w5×energy
-  ```
-- Integrates AI predictions
-- Caches scores in Redis sorted sets
-
-### Optimization Engine
-- Retrieves ranked stations
-- Applies constraints (capacity, health, faults)
-- Calculates distance-adjusted scores
-- Returns Top-K stations
-
-### Recommendation Service
-- Orchestrates the recommendation flow
-- Calls optimization engine
-- Generates LLM explanations
-- Logs requests and feedback
-
-### LLM Explanation Layer
-- Generates human-readable explanations
-- Uses OpenAI GPT-4 (or fallback templates)
-- Provides admin summaries
-- Applies XAI principles
+```
+📦 ev-charging-platform/
+│
+├── 📁 src/
+│   ├── 📁 config/              # ⚙️ Environment configuration
+│   │   └── index.ts
+│   │
+│   ├── 📁 db/                  # 🗄️ Database layer
+│   │   ├── client.ts           # PostgreSQL client
+│   │   ├── migrations.ts       # Schema migrations
+│   │   ├── repositories.ts     # Data access layer
+│   │   └── seed.ts             # Sample data
+│   │
+│   ├── 📁 kafka/               # 📫 Message broker
+│   │   ├── client.ts           # Kafka producer/consumer
+│   │   └── createTopics.ts     # Topic management
+│   │
+│   ├── 📁 redis/               # ⚡ Caching layer
+│   │   └── client.ts           # Redis client
+│   │
+│   ├── 📁 services/            # 🔧 Microservices
+│   │   ├── 📁 api/             # REST API Gateway
+│   │   ├── 📁 ingestion/       # Data Ingestion
+│   │   ├── 📁 features/        # Feature Engineering
+│   │   ├── 📁 scoring/         # Scoring Engine
+│   │   ├── 📁 optimization/    # Optimization Engine
+│   │   ├── 📁 recommendation/  # Recommendation Service
+│   │   └── 📁 llm/             # LLM Explanations
+│   │
+│   ├── 📁 types/               # 📝 TypeScript interfaces
+│   ├── 📁 utils/               # 🔨 Helpers & utilities
+│   └── index.ts                # 🚀 Main entry point
+│
+├── 📁 docker/                  # 🐳 Docker configurations
+│   ├── Dockerfile.*            # Service Dockerfiles
+│   ├── init-db.sql             # Database initialization
+│   └── mock-ai-server.js       # Mock AI for development
+│
+├── 📁 docs/                    # 📚 Documentation
+│   ├── API_REFERENCE.md
+│   ├── IMPLEMENTATION.md
+│   └── WORKFLOW.md
+│
+├── docker-compose.yml          # Full stack deployment
+├── docker-compose.infra.yml    # Infrastructure only (local dev)
+├── openspec.yml                # OpenAPI 3.0 specification
+├── package.json
+└── tsconfig.json
+```
 
 ---
 
 ## ⚙️ Configuration
 
-Key environment variables:
+### Environment Variables
+
+Create a `.env` file in the project root:
 
 ```env
-# Server
+# ═══════════════════════════════════════════════════════════════
+# 🖥️ SERVER CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
 NODE_ENV=development
 API_PORT=3000
 
-# Kafka
+# ═══════════════════════════════════════════════════════════════
+# 📫 KAFKA CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
 KAFKA_BROKERS=localhost:9092
+KAFKA_CLIENT_ID=ev-platform
 
-# Redis
+# ═══════════════════════════════════════════════════════════════
+# ⚡ REDIS CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# PostgreSQL
+# ═══════════════════════════════════════════════════════════════
+# 🗄️ POSTGRESQL CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
 POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
 POSTGRES_USER=evplatform
 POSTGRES_PASSWORD=evplatform123
 POSTGRES_DB=evplatform
 
-# OpenAI (optional)
-OPENAI_API_KEY=your-key-here
+# ═══════════════════════════════════════════════════════════════
+# 🤖 AI SERVICES CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
+# For development (uses mock-ai-server.js)
+AI_PREDICTION_URL=http://localhost:8081/predict
+AI_DEMAND_URL=http://localhost:8081/demand
 
-# Scoring Weights
+# For production (use OpenAI)
+OPENAI_API_KEY=your-api-key-here
+
+# ═══════════════════════════════════════════════════════════════
+# ⚖️ SCORING WEIGHTS (must sum to 1.0)
+# ═══════════════════════════════════════════════════════════════
 WEIGHT_WAIT_TIME=0.25
 WEIGHT_AVAILABILITY=0.20
 WEIGHT_RELIABILITY=0.20
@@ -425,130 +566,129 @@ WEIGHT_ENERGY_STABILITY=0.15
 
 ---
 
-## 🐳 Deployment
+## 📊 Monitoring & Tools
 
-### Docker Compose (Full Stack)
+### RedisInsight (Port 8001)
 
-```bash
-# Start everything
-docker-compose up -d
+Browse Redis data, monitor keys, run commands.
 
-# View logs
-docker-compose logs -f api
-
-# Stop
-docker-compose down
+```
+http://localhost:8001
 ```
 
-### Production Considerations
+### Kafka UI (Port 8082)
 
-1. **Scaling**: Each service can be scaled independently
-2. **Kafka Partitions**: Increase for higher throughput
-3. **Redis Cluster**: Use Redis Cluster for HA
-4. **Database**: Use connection pooling (PgBouncer)
-5. **Secrets**: Use Kubernetes secrets or Vault
-6. **Monitoring**: Add Prometheus + Grafana
+Monitor topics, consumers, messages.
+
+```
+http://localhost:8082
+```
+
+### pgAdmin (Port 5050)
+
+Manage PostgreSQL database.
+
+```
+http://localhost:5050
+Email: admin@gmail.com
+Password: admin123
+```
+
+**Connect to database:**
+
+| Property | Value |
+|----------|-------|
+| Host | `postgres` (in Docker) or `localhost` (from host) |
+| Port | `5432` |
+| Database | `evplatform` |
+| Username | `evplatform` |
+| Password | `evplatform123` |
 
 ---
 
-## 🧪 Development
-
-### Project Structure
-
-```
-backend/
-├── src/
-│   ├── config/           # Configuration
-│   ├── db/               # Database (migrations, repositories)
-│   ├── kafka/            # Kafka clients and topics
-│   ├── redis/            # Redis client and helpers
-│   ├── services/
-│   │   ├── api/          # REST API Gateway
-│   │   ├── features/     # Feature Engineering
-│   │   ├── ingestion/    # Data Ingestion
-│   │   ├── llm/          # LLM Explanations
-│   │   ├── optimization/ # Optimization Engine
-│   │   ├── recommendation/ # Recommendation Service
-│   │   └── scoring/      # Scoring Engine
-│   ├── types/            # TypeScript interfaces
-│   ├── utils/            # Helpers (logger, validation)
-│   └── index.ts          # Main entry point
-├── docker/               # Dockerfiles
-├── docker-compose.yml    # Full stack setup
-├── package.json
-└── tsconfig.json
-```
-
-### Running Tests
-
-```bash
-npm test
-```
-
-### Linting
-
-```bash
-npm run lint
-```
-
----
-
-## 📊 Sample API Calls
-
-### Ingest Station Data
-```bash
-curl -X POST http://localhost:3000/ingest/station \
-  -H "Content-Type: application/json" \
-  -d '{
-    "stationId": "ST_101",
-    "queueLength": 3,
-    "avgServiceTime": 5,
-    "availableChargers": 8,
-    "totalChargers": 12,
-    "faultRate": 0.01,
-    "availablePower": 450,
-    "maxCapacity": 500
-  }'
-```
-
-### Get Recommendations
-```bash
-curl "http://localhost:3000/recommend?userId=demo&lat=37.7749&lon=-122.4194&limit=3"
-```
-
-### Admin Summary
-```bash
-curl http://localhost:3000/admin/summary
-```
-
----
-
-## � Documentation
-
-For more detailed documentation, see:
+## 📚 Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Implementation Guide](docs/IMPLEMENTATION.md) | Technical implementation details, algorithms, caching strategies |
-| [Workflow Documentation](docs/WORKFLOW.md) | Data flow diagrams, sequence diagrams, error handling |
-| [API Reference](docs/API_REFERENCE.md) | Complete REST API documentation with examples |
+| [openspec.yml](openspec.yml) | OpenAPI 3.0 specification |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | Complete API documentation |
+| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Technical implementation details |
+| [WORKFLOW.md](docs/WORKFLOW.md) | Data flow & sequence diagrams |
 
 ---
 
-## �📜 License
+## 🐛 Troubleshooting
 
-MIT License - See LICENSE file for details.
+<details>
+<summary><b>❌ Port already in use</b></summary>
+
+```bash
+# Find process using the port (Windows)
+netstat -ano | findstr :3000
+
+# Kill the process
+taskkill /PID <PID> /F
+
+# Linux/Mac
+lsof -i :3000
+kill -9 <PID>
+```
+
+</details>
+
+<details>
+<summary><b>❌ Kafka connection refused</b></summary>
+
+1. Ensure infrastructure is running: `docker ps`
+2. Wait 30 seconds for Kafka to initialize
+3. Check logs: `npm run infra:logs`
+
+</details>
+
+<details>
+<summary><b>❌ Database tables empty</b></summary>
+
+Database auto-seeds on startup. If still empty:
+
+```bash
+npm run seed
+```
+
+</details>
+
+<details>
+<summary><b>❌ Redis connection error</b></summary>
+
+1. Check Redis is running: `docker ps | grep redis`
+2. Test connection: `docker exec -it ev-redis redis-cli ping`
+
+</details>
+
+<details>
+<summary><b>❌ "Group coordinator is not available" errors</b></summary>
+
+These Kafka warnings during startup are normal. Wait a few seconds for the Kafka cluster to fully initialize.
+
+</details>
 
 ---
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests
-5. Submit a pull request
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
 
 ---
 
-Built with ❤️ for the EV future.
+## 📜 License
+
+MIT License - See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <b>Built with ⚡ for the electric future</b>
+</p>
