@@ -612,6 +612,7 @@ Password: admin123
 |----------|-------------|
 | [openspec.yml](openspec.yml) | OpenAPI 3.0 specification |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Complete API documentation |
+| [INTEGRATION.md](docs/INTEGRATION.md) | Integration guide & examples |
 | [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Technical implementation details |
 | [WORKFLOW.md](docs/WORKFLOW.md) | Data flow & sequence diagrams |
 

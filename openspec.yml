@@ -13,17 +13,17 @@ info:
     
     ## Microservices Architecture
     
-    | Service | Port | Description |
-    |---------|------|-------------|
-    | API Gateway | 3000 | Main entry point, proxies to other services |
-    | Ingestion Service | 3001 | Handles telemetry, health, grid, and user data ingestion |
-    | Features Service | 3002 | Feature engineering and processing |
-    | Scoring Service | 3003 | Station scoring calculations |
-    | Optimization Service | 3004 | Route and charging optimization |
-    | Recommendation Service | 3005 | Generates station recommendations |
-    | LLM Service | 3006 | AI-powered summaries and insights |
-    | External AI (Mock) | 8081 | Load forecasting and fault prediction |
-    | Kafka UI | 8082 | Kafka monitoring dashboard |
+    | Service | Port | Base URL |
+    |---------|------|----------|
+    | API Gateway | 3000 | `http://localhost:3000` |
+    | Ingestion Service | 3001 | `http://localhost:3001` |
+    | Features Service | 3002 | `http://localhost:3002` |
+    | Scoring Service | 3003 | `http://localhost:3003` |
+    | Optimization Service | 3004 | `http://localhost:3004` |
+    | Recommendation Service | 3005 | `http://localhost:3005` |
+    | LLM Service | 3006 | `http://localhost:3006` |
+    | External AI (Mock) | 8081 | `http://localhost:8081` |
+    | Kafka UI | 8082 | `http://localhost:8082` |
     
     ## Authentication
     Currently open for development. Production deployments should implement JWT/OAuth2.
@@ -33,53 +33,44 @@ info:
   license:
     name: MIT
 
-servers:
-  - url: http://localhost:3000
-    description: API Gateway (main entry point)
-  - url: http://localhost:3001
-    description: Ingestion Service
-  - url: http://localhost:3002
-    description: Features Service
-  - url: http://localhost:3003
-    description: Scoring Service
-  - url: http://localhost:3004
-    description: Optimization Service
-  - url: http://localhost:3005
-    description: Recommendation Service
-  - url: http://localhost:3006
-    description: LLM Service
-  - url: http://localhost:8081
-    description: External AI Service (Mock)
-  - url: http://localhost:8082
-    description: Kafka UI (monitoring)
-  - url: https://api.ev-platform.com
-    description: Production server (all services behind gateway)
-
 tags:
   - name: Health
-    description: Health and readiness endpoints
+    description: Health and readiness endpoints (All services)
   - name: Ingestion
-    description: Data ingestion endpoints for telemetry and user context (Port 3001)
+    description: Data ingestion endpoints (http://localhost:3001)
   - name: Recommendations
-    description: Station recommendation endpoints (Port 3000/3005)
+    description: Station recommendation endpoints (http://localhost:3000 for GET, http://localhost:3005 for selection/feedback)
   - name: Stations
-    description: Station information endpoints (Port 3000)
+    description: Station information endpoints (http://localhost:3000)
   - name: Admin
-    description: Administrative and monitoring endpoints (Port 3000)
+    description: Administrative and monitoring endpoints (http://localhost:3000)
   - name: Features
-    description: Feature engineering service (Port 3002)
+    description: Feature engineering service (http://localhost:3002)
   - name: Scoring
-    description: Station scoring service (Port 3003)
+    description: Station scoring service (http://localhost:3003)
   - name: AI
-    description: External AI prediction services (Port 8081)
+    description: External AI prediction services (http://localhost:8081)
 
 paths:
+  # ============================================================================
+  # HEALTH ENDPOINTS (All Services)
+  # ============================================================================
+  
   /health:
     get:
       tags:
         - Health
       summary: Health check
-      description: Basic health check endpoint to verify API and database status
+      description: |
+        Basic health check endpoint to verify API and database status.
+        
+        **Available on all services:**
+        - API Gateway: `http://localhost:3000/health`
+        - Ingestion: `http://localhost:3001/health`
+        - Features: `http://localhost:3002/health`
+        - Scoring: `http://localhost:3003/health`
+        - Recommendation: `http://localhost:3005/health`
+        - Mock AI: `http://localhost:8081/health`
       operationId: healthCheck
       responses:
         '200':
@@ -121,6 +112,10 @@ paths:
                 ready: false
                 reason: Database not available
 
+  # ============================================================================
+  # INGESTION ENDPOINTS (Port 3001)
+  # ============================================================================
+
   /ingest/station:
     post:
       tags:
@@ -129,11 +124,13 @@ paths:
       description: |
         Ingest real-time station telemetry data for processing.
         
-        **Service:** Ingestion Service (port 3001) or API Gateway (port 3000)
+        **URL:** `http://localhost:3001/ingest/station`
+        
+        Also proxied via API Gateway: `http://localhost:3000/ingest/station`
       operationId: ingestStationTelemetry
       servers:
         - url: http://localhost:3001
-          description: Ingestion Service (dedicated)
+          description: Ingestion Service (primary)
         - url: http://localhost:3000
           description: API Gateway (proxied)
       requestBody:
@@ -177,11 +174,13 @@ paths:
       description: |
         Ingest multiple station telemetry records at once.
         
-        **Service:** Ingestion Service (port 3001) only
+        **URL:** `http://localhost:3001/ingest/station/batch`
+        
+        ⚠️ This endpoint is ONLY available on the Ingestion Service (port 3001), not proxied through API Gateway.
       operationId: batchIngestStationTelemetry
       servers:
         - url: http://localhost:3001
-          description: Ingestion Service (dedicated)
+          description: Ingestion Service (only)
       requestBody:
         required: true
         content:
@@ -192,10 +191,20 @@ paths:
               stations:
                 - stationId: ST_101
                   queueLength: 5
+                  avgServiceTime: 6
                   availableChargers: 4
+                  totalChargers: 10
+                  faultRate: 0.01
+                  availablePower: 380
+                  maxCapacity: 500
                 - stationId: ST_102
                   queueLength: 2
+                  avgServiceTime: 5
                   availableChargers: 8
+                  totalChargers: 12
+                  faultRate: 0.02
+                  availablePower: 290
+                  maxCapacity: 350
       responses:
         '202':
           description: Batch accepted for processing
@@ -225,11 +234,13 @@ paths:
       description: |
         Ingest user context for personalized recommendations.
         
-        **Service:** Ingestion Service (port 3001) or API Gateway (port 3000)
+        **URL:** `http://localhost:3001/ingest/user-context`
+        
+        Also proxied via API Gateway: `http://localhost:3000/ingest/user-context`
       operationId: ingestUserContext
       servers:
         - url: http://localhost:3001
-          description: Ingestion Service (dedicated)
+          description: Ingestion Service (primary)
         - url: http://localhost:3000
           description: API Gateway (proxied)
       requestBody:
@@ -274,13 +285,35 @@ paths:
         - Ingestion
       summary: Ingest station health
       description: |
-        Ingest station health data.
+        Ingest station health data. This endpoint **must be called** before health data can be retrieved via `GET /station/{id}/health`.
         
-        **Service:** Ingestion Service (port 3001) only
+        **URL:** `http://localhost:3001/ingest/health`
+        
+        Health data is stored in Redis and can then be queried via the API Gateway on port 3000.
+        
+        **Example:**
+        ```bash
+        curl -X POST "http://localhost:3001/ingest/health" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "stationId": "ST_101",
+            "status": "operational",
+            "lastMaintenanceDate": "2026-01-15",
+            "uptimePercentage": 99.5,
+            "activeAlerts": [],
+            "healthScore": 95,
+            "timestamp": 1736500000
+          }'
+        ```
+        
+        **Then retrieve via:**
+        ```bash
+        curl "http://localhost:3000/station/ST_101/health"
+        ```
       operationId: ingestStationHealth
       servers:
         - url: http://localhost:3001
-          description: Ingestion Service (dedicated)
+          description: Ingestion Service (only)
       requestBody:
         required: true
         content:
@@ -318,11 +351,11 @@ paths:
       description: |
         Ingest power grid status data.
         
-        **Service:** Ingestion Service (port 3001) only
+        **URL:** `http://localhost:3001/ingest/grid`
       operationId: ingestGridStatus
       servers:
         - url: http://localhost:3001
-          description: Ingestion Service (dedicated)
+          description: Ingestion Service (only)
       requestBody:
         required: true
         content:
@@ -353,13 +386,23 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  # ============================================================================
+  # RECOMMENDATION ENDPOINTS
+  # ============================================================================
+
   /recommend:
     get:
       tags:
         - Recommendations
       summary: Get recommendations (GET)
-      description: Get charging station recommendations based on query parameters
+      description: |
+        Get charging station recommendations based on query parameters.
+        
+        **URL:** `http://localhost:3000/recommend`
       operationId: getRecommendations
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       parameters:
         - name: userId
           in: query
@@ -454,8 +497,14 @@ paths:
       tags:
         - Recommendations
       summary: Get recommendations (POST)
-      description: Get charging station recommendations via POST request body
+      description: |
+        Get charging station recommendations via POST request body.
+        
+        **URL:** `http://localhost:3000/recommend`
       operationId: postRecommendations
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       requestBody:
         required: true
         content:
@@ -492,8 +541,14 @@ paths:
       tags:
         - Recommendations
       summary: Get cached recommendation
-      description: Retrieve a cached recommendation by request ID
+      description: |
+        Retrieve a cached recommendation by request ID.
+        
+        **URL:** `http://localhost:3005/recommend/{requestId}`
       operationId: getCachedRecommendation
+      servers:
+        - url: http://localhost:3005
+          description: Recommendation Service
       parameters:
         - name: requestId
           in: path
@@ -519,15 +574,30 @@ paths:
       tags:
         - Recommendations
       summary: Record station selection
-      description: Record when a user selects a station from recommendations
+      description: |
+        Record when a user selects a station from recommendations.
+        
+        **URL:** `http://localhost:3005/recommend/{requestId}/select`
+        
+        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3005), not the API Gateway.
+        
+        **Example:**
+        ```bash
+        curl -X POST "http://localhost:3005/recommend/REQ_abc123/select" \
+          -H "Content-Type: application/json" \
+          -d '{"stationId": "ST_101"}'
+        ```
       operationId: recordStationSelection
+      servers:
+        - url: http://localhost:3005
+          description: Recommendation Service (only)
       parameters:
         - name: requestId
           in: path
           required: true
           schema:
             type: string
-          description: Recommendation request ID
+          description: Recommendation request ID (from /recommend response)
           example: REQ_abc123
       requestBody:
         required: true
@@ -559,8 +629,23 @@ paths:
       tags:
         - Recommendations
       summary: Submit recommendation feedback
-      description: Submit feedback on recommendation quality
+      description: |
+        Submit feedback on recommendation quality.
+        
+        **URL:** `http://localhost:3005/recommend/{requestId}/feedback`
+        
+        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3005), not the API Gateway.
+        
+        **Example:**
+        ```bash
+        curl -X POST "http://localhost:3005/recommend/REQ_abc123/feedback" \
+          -H "Content-Type: application/json" \
+          -d '{"rating": 5}'
+        ```
       operationId: submitFeedback
+      servers:
+        - url: http://localhost:3005
+          description: Recommendation Service (only)
       parameters:
         - name: requestId
           in: path
@@ -594,13 +679,23 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  # ============================================================================
+  # STATION ENDPOINTS (Port 3000)
+  # ============================================================================
+
   /station/{id}/score:
     get:
       tags:
         - Stations
       summary: Get station score
-      description: Get real-time score for a specific station
+      description: |
+        Get real-time score for a specific station.
+        
+        **URL:** `http://localhost:3000/station/{id}/score`
       operationId: getStationScore
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       parameters:
         - name: id
           in: path
@@ -626,8 +721,38 @@ paths:
       tags:
         - Stations
       summary: Get station health
-      description: Get health status for a station
+      description: |
+        Get health status for a station.
+        
+        **URL:** `http://localhost:3000/station/{id}/health`
+        
+        ⚠️ **Prerequisites:** Health data must be ingested first via `POST http://localhost:3001/ingest/health` before it can be retrieved.
+        
+        If no health data has been ingested for the station, this endpoint returns a 404 error with `{"success": false, "error": "Health data not found"}`.
+        
+        **Example - First ingest health data:**
+        ```bash
+        curl -X POST "http://localhost:3001/ingest/health" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "stationId": "ST_101",
+            "status": "operational",
+            "lastMaintenanceDate": "2026-01-15",
+            "uptimePercentage": 99.5,
+            "activeAlerts": [],
+            "healthScore": 95,
+            "timestamp": 1736500000
+          }'
+        ```
+        
+        **Then retrieve health data:**
+        ```bash
+        curl "http://localhost:3000/station/ST_101/health"
+        ```
       operationId: getStationHealth
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       parameters:
         - name: id
           in: path
@@ -644,7 +769,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/StationHealthResponse'
         '404':
-          $ref: '#/components/responses/NotFoundError'
+          description: Health data not found - must ingest health data first via POST /ingest/health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error: Health data not found
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -653,8 +785,14 @@ paths:
       tags:
         - Stations
       summary: Get station predictions
-      description: Get AI predictions (load forecast and fault prediction) for a station
+      description: |
+        Get AI predictions (load forecast and fault prediction) for a station.
+        
+        **URL:** `http://localhost:3000/station/{id}/predictions`
       operationId: getStationPredictions
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       parameters:
         - name: id
           in: path
@@ -675,13 +813,23 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  # ============================================================================
+  # ADMIN ENDPOINTS (Port 3000)
+  # ============================================================================
+
   /admin/summary:
     get:
       tags:
         - Admin
       summary: Get admin summary
-      description: Get system-wide summary for admin dashboard with LLM-generated narrative
+      description: |
+        Get system-wide summary for admin dashboard with LLM-generated narrative.
+        
+        **URL:** `http://localhost:3000/admin/summary`
       operationId: getAdminSummary
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       responses:
         '200':
           description: Admin summary retrieved
@@ -697,8 +845,14 @@ paths:
       tags:
         - Admin
       summary: Get system metrics
-      description: Get detailed system metrics including Kafka, Redis, and API stats
+      description: |
+        Get detailed system metrics including Kafka, Redis, and API stats.
+        
+        **URL:** `http://localhost:3000/admin/metrics`
       operationId: getSystemMetrics
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       responses:
         '200':
           description: System metrics retrieved
@@ -714,8 +868,14 @@ paths:
       tags:
         - Admin
       summary: List all stations
-      description: Get a list of all registered stations
+      description: |
+        Get a list of all registered stations.
+        
+        **URL:** `http://localhost:3000/admin/stations`
       operationId: listStations
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       responses:
         '200':
           description: Stations list retrieved
@@ -731,8 +891,14 @@ paths:
       tags:
         - Admin
       summary: Get system events
-      description: Get system events log with optional filtering
+      description: |
+        Get system events log with optional filtering.
+        
+        **URL:** `http://localhost:3000/admin/events`
       operationId: getSystemEvents
+      servers:
+        - url: http://localhost:3000
+          description: API Gateway
       parameters:
         - name: limit
           in: query
@@ -758,39 +924,31 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
-  # External AI Service Endpoints (Port 8081)
+  # ============================================================================
+  # EXTERNAL AI SERVICE ENDPOINTS (Port 8081)
+  # ============================================================================
+
   /ai/load-forecast:
-    post:
+    get:
       tags:
         - AI
       summary: Get load forecast prediction
       description: |
         Get AI-powered load forecast prediction for a station.
         
-        **Service:** External AI Service (port 8081)
+        **URL:** `http://localhost:8081/ai/load-forecast?stationId=ST_101`
       operationId: getLoadForecast
       servers:
         - url: http://localhost:8081
           description: External AI Service (Mock)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - stationId
-              properties:
-                stationId:
-                  type: string
-                  description: Station ID to predict load for
-                timestamp:
-                  type: integer
-                  format: int64
-                  description: Unix timestamp for prediction
-            example:
-              stationId: ST_101
-              timestamp: 1736500000
+      parameters:
+        - name: stationId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Station ID to predict load for
+          example: ST_101
       responses:
         '200':
           description: Load forecast prediction
@@ -804,15 +962,48 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   /ai/fault-probability:
-    post:
+    get:
       tags:
         - AI
       summary: Get fault probability prediction
       description: |
         Get AI-powered fault probability prediction for a station.
         
-        **Service:** External AI Service (port 8081)
+        **URL:** `http://localhost:8081/ai/fault-probability?stationId=ST_101`
       operationId: getFaultProbability
+      servers:
+        - url: http://localhost:8081
+          description: External AI Service (Mock)
+      parameters:
+        - name: stationId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Station ID to predict fault for
+          example: ST_101
+      responses:
+        '200':
+          description: Fault probability prediction
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaultPrediction'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ai/batch-predict:
+    post:
+      tags:
+        - AI
+      summary: Batch predictions
+      description: |
+        Get batch predictions for multiple stations.
+        
+        **URL:** `http://localhost:8081/ai/batch-predict`
+      operationId: batchPredict
       servers:
         - url: http://localhost:8081
           description: External AI Service (Mock)
@@ -823,25 +1014,34 @@ paths:
             schema:
               type: object
               required:
-                - stationId
+                - stationIds
               properties:
-                stationId:
-                  type: string
-                  description: Station ID to predict fault for
-                timestamp:
-                  type: integer
-                  format: int64
-                  description: Unix timestamp for prediction
+                stationIds:
+                  type: array
+                  items:
+                    type: string
+                  description: Array of station IDs
             example:
-              stationId: ST_101
-              timestamp: 1736500000
+              stationIds: ["ST_101", "ST_102", "ST_103"]
       responses:
         '200':
-          description: Fault probability prediction
+          description: Batch predictions
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FaultPrediction'
+                type: object
+                properties:
+                  predictions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        stationId:
+                          type: string
+                        loadForecast:
+                          $ref: '#/components/schemas/LoadForecast'
+                        faultPrediction:
+                          $ref: '#/components/schemas/FaultPrediction'
         '400':
           $ref: '#/components/responses/ValidationError'
         '500':
