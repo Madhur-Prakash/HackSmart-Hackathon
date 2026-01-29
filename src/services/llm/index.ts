@@ -134,7 +134,7 @@ export async function generateExplanation(context: ExplanationContext): Promise<
               content: prompt,
             },
           ],
-          max_tokens: 200,
+          // max_tokens: 200,
           temperature: 0.7,
         });
       },

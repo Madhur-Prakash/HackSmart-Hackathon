@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "concurrently --kill-others-on-fail -n api,ingestion,features,scoring,optimization,recommendation,llm,mock-ai -c blue,green,yellow,magenta,cyan,red,white,gray \"npm run dev:api\" \"npm run dev:ingestion\" \"npm run dev:features\" \"npm run dev:scoring\" \"npm run dev:optimization\" \"npm run dev:recommendation\" \"npm run dev:llm\" \"npm run dev:mock-ai\"",
+    "dev": "concurrently --kill-others-on-fail -n api,ingestion,features,scoring,optimization,recommendation,llm,mock-ai -c blue,green,yellow,magenta,cyan,pink,white,gray \"npm run dev:api\" \"npm run dev:ingestion\" \"npm run dev:features\" \"npm run dev:scoring\" \"npm run dev:optimization\" \"npm run dev:recommendation\" \"npm run dev:llm\" \"npm run dev:mock-ai\"",
     "dev:api": "ts-node-dev --respawn --transpile-only src/index.ts",
     "dev:ingestion": "ts-node-dev --respawn --transpile-only src/services/ingestion/index.ts",
     "dev:features": "ts-node-dev --respawn --transpile-only src/services/features/index.ts",

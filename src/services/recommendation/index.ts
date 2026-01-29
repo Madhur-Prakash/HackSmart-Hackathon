@@ -127,6 +127,7 @@ function createApp(): Application {
   app.get('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Parse query parameters
+      console.log('runnning recommendation/index.ts recommend GET');
       const request: RecommendationRequest = {
         userId: req.query.userId as string || 'anonymous',
         location: {

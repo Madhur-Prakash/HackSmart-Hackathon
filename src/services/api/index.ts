@@ -67,20 +67,20 @@ export function createApiApp(): Application {
   app.use(limiter);
 
   // Request logging
-  app.use((req: Request, res: Response, next: NextFunction) => {
-    const start = Date.now();
+  // app.use((req: Request, res: Response, next: NextFunction) => {
+  //   const start = Date.now();
     
-    res.on('finish', () => {
-      const duration = Date.now() - start;
-      logMetrics(logger, 'api.request.latency', duration, {
-        method: req.method,
-        path: req.path,
-        status: res.statusCode.toString(),
-      });
-    });
+  //   res.on('finish', () => {
+  //     const duration = Date.now() - start;
+  //     logMetrics(logger, 'api.request.latency', duration, {
+  //       method: req.method,
+  //       path: req.path,
+  //       status: res.statusCode.toString(),
+  //     });
+  //   });
     
-    next();
-  });
+  //   next();
+  // });
 
   // ==========================================
   // Health & Status Endpoints
@@ -198,6 +198,7 @@ export function createApiApp(): Application {
   app.get('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
+      console.log('runnning api/index.ts recommend GET');
 
       const request = {
         userId: (req.query.userId as string) || 'anonymous',
