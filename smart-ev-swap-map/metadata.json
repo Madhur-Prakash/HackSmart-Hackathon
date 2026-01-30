@@ -1,0 +1,7 @@
+{
+  "name": "Smart EV Swap Navigator",
+  "description": "A high-fidelity simulation dashboard for autonomous EV battery swapping scenarios, featuring real-time rerouting, traffic optimization, and fault-tolerant navigation using OpenStreetMap and Gemini AI narration.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
