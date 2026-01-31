@@ -17,6 +17,7 @@ class PredictRequest(BaseModel):
 
 @app.post("/predict")
 async def predict(req: PredictRequest):
+    print("📢Received request:", req)
     model_path = req.model_path
     input_data = req.input_data
     if not os.path.exists(model_path):
