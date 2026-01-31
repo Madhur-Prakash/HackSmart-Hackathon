@@ -20,6 +20,7 @@ import {
   Delivery,
   QRQueueEntry
 } from '../../types';
+import { generateAndSaveQR, deleteQR, getQRRelativePath } from './qrUtil';
 import { qrQueueRepository, notificationRepository, deliveryRepository, driverRepository, faultTicketRepository } from '../../db/repositories';
 
 const logger = createLogger('recommendation-service');
@@ -195,7 +196,10 @@ function createApp(): Application {
         joinedAt: now,
       };
       await qrQueueRepository.create(entry);
-      res.json({ success: true, qrCode, entry });
+      // Generate and save QR code image
+      await generateAndSaveQR(qrCode);
+      const qrImagePath = getQRRelativePath(qrCode);
+      res.json({ success: true, qrCode, qrImagePath, entry });
     } catch (error) {
       next(error);
     }
@@ -228,6 +232,8 @@ function createApp(): Application {
         return res.status(404).json({ success: false, error: 'QR code not found' });
       }
       await qrQueueRepository.updateStatus(entry.id, 'verified');
+      // Delete QR code image after verification
+      deleteQR(qrCode);
       // Get live queue for station
       const queue = await qrQueueRepository.findByStation(entry.stationId);
       const busyCount = queue.filter(e => e.status === 'verified').length;
