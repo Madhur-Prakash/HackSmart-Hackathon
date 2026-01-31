@@ -6,6 +6,7 @@ import {
   Marker, 
   Popup, 
   Polyline, 
+  Circle, 
   useMap 
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -19,7 +20,8 @@ import {
 import { 
   INITIAL_CENTER, 
   SWAP_STATIONS, 
-  START_POINT 
+  START_POINT,
+  SHOPS
 } from './constants';
 import { getRoute } from './services/routingService';
 import { getEventNarration } from './services/geminiService';
@@ -272,20 +274,64 @@ const App: React.FC = () => {
           attribution='&copy; OpenStreetMap'
         />
         <MapUpdater center={state.carPosition} />
-        {stations.map((station) => (
-          <Marker key={station.id} position={station.location} icon={stationIcon(station.status, theme)}>
-            <Popup>
-              <div className="font-bold text-sm text-slate-800 tracking-tight">{station.name}</div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Draw regions and station markers */}
+        {stations.map((station) => {
+          // Get shops for this station
+          const shops = SHOPS.filter(shop => shop.stationId === station.id);
+          // Compute region center (station) and radius to cover all shops (max distance)
+          const distances = shops.map(shop => {
+            const [lat1, lon1] = station.location;
+            const [lat2, lon2] = shop.location;
+            const R = 6371e3; // metres
+            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          });
+          const regionRadius = Math.max(100, ...distances) + 40; // meters, min 100m
+          return (
+            <React.Fragment key={station.id}>
+              <Circle
+                center={station.location}
+                radius={regionRadius}
+                pathOptions={{
+                  color: theme === 'tactical' ? '#FFD60A' : '#34C759',
+                  fillColor: theme === 'tactical' ? '#FFD60A33' : '#34C75933',
+                  fillOpacity: 0.18,
+                  weight: 2,
+                  dashArray: '6 8',
+                }}
+              />
+              <Marker position={station.location} icon={stationIcon(station.status, theme)}>
+                <Popup>
+                  <div className="font-bold text-sm text-slate-800 tracking-tight">{station.name}</div>
+                </Popup>
+              </Marker>
+              {/* Shop markers */}
+              {shops.map(shop => (
+                <Marker key={shop.id} position={shop.location} icon={L.divIcon({
+                  html: `<div class='bg-white/90 border border-green-400 rounded-full w-7 h-7 flex items-center justify-center shadow-md'><svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='#34C759' stroke-width='2.2' viewBox='0 0 24 24'><circle cx='12' cy='12' r='4'/><path d='M12 2v2m0 16v2m10-10h-2M4 12H2m15.07-7.07-1.42 1.42M6.34 17.66l-1.42 1.42m12.02 0-1.42-1.42M6.34 6.34 4.92 4.92'/></svg></div>`,
+                  className: '',
+                  iconSize: [28, 28],
+                  iconAnchor: [14, 14],
+                })}>
+                  <Popup>
+                    <div className="font-semibold text-xs text-green-700">{shop.name}</div>
+                  </Popup>
+                </Marker>
+              ))}
+            </React.Fragment>
+          );
+        })}
         <Marker position={state.carPosition} icon={carIcon(theme)} />
         {state.route.length > 0 && (
           <Polyline 
             positions={state.route} 
             pathOptions={{ 
               color: theme === 'tactical' ? '#0A84FF' : '#007AFF', 
-              weight: 8, 
+              weight: 8,
               opacity: 0.8,
             }} 
           />
