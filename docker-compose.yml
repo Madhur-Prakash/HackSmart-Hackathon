@@ -1,10 +1,11 @@
-version: "3.8"
+version: '3.8'
 
 services:
+  # ==========================================
+  # Infrastructure Services
+  # ==========================================
 
-  # =========================
-  # Zookeeper
-  # =========================
+  # Zookeeper for Kafka
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: ev-zookeeper
@@ -24,129 +25,102 @@ services:
     networks:
       - ev-network
 
-
-  # =========================
-  # Kafka (EC2 Optimized)
-  # =========================
+  # Kafka Message Broker
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: ev-kafka
-
     depends_on:
       zookeeper:
         condition: service_healthy
-
     ports:
       - "9092:9092"
       - "29092:29092"
-
     environment:
-
-      # Basic
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-
-      # Listeners
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-
-      # ⚠️ REPLACE YOUR_PUBLIC_IP
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://3.111.41.15:9092
-
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-
-      # Low Memory
-      KAFKA_HEAP_OPTS: "-Xmx256M -Xms128M"
-
-      # Single Node
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_RETENTION_BYTES: 1073741824
     volumes:
       - kafka-data:/var/lib/kafka/data
-
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 30s
       timeout: 10s
       retries: 5
-
     networks:
       - ev-network
 
+  # Kafka UI for monitoring
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: ev-kafka-ui
+    depends_on:
+      - kafka
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: ev-platform
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - ev-network
 
-  # =========================
-  # Redis Stack
-  # =========================
+  # Redis Cache
   redis:
-    image: redis/redis-stack:latest
+    image: redis:7-alpine
     container_name: ev-redis
-    restart: unless-stopped
-
     ports:
       - "6379:6379"
-      - "8001:8001"
-
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
       - redis-data:/data
-
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-
     networks:
       - ev-network
 
-
-  # =========================
-  # PostgreSQL
-  # =========================
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: ev-postgres
-
     environment:
       POSTGRES_USER: evplatform
       POSTGRES_PASSWORD: evplatform123
       POSTGRES_DB: evplatform
-
     ports:
       - "5432:5432"
-
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init.sql
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U evplatform"]
       interval: 10s
       timeout: 5s
       retries: 5
-
     networks:
       - ev-network
 
+  # ==========================================
+  # Application Services
+  # ==========================================
 
-  # =========================
-  # API Gateway
-  # =========================
+  # Main API Gateway
   api:
     build:
       context: .
       dockerfile: docker/Dockerfile.api
-
     container_name: ev-api
-
     depends_on:
       postgres:
         condition: service_healthy
@@ -154,155 +128,104 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-
     ports:
       - "3000:3000"
-
     environment:
       NODE_ENV: production
       API_PORT: 3000
-
       KAFKA_BROKERS: kafka:29092
-
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
       POSTGRES_USER: evplatform
       POSTGRES_PASSWORD: evplatform123
       POSTGRES_DB: evplatform
-
-      GROQ_API_KEY: ${GROQ_API_KEY:-}
-
-      AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
-      AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability
-
-    restart: unless-stopped
-
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     networks:
       - ev-network
+    restart: unless-stopped
 
-
-  # =========================
-  # Ingestion
-  # =========================
+  # Ingestion Service
   ingestion:
     build:
       context: .
       dockerfile: docker/Dockerfile.ingestion
-
     container_name: ev-ingestion
-
     depends_on:
       kafka:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     ports:
       - "3001:3001"
-
     environment:
       NODE_ENV: production
       INGESTION_PORT: 3001
-
       KAFKA_BROKERS: kafka:29092
-
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
-    restart: unless-stopped
-
     networks:
       - ev-network
+    restart: unless-stopped
 
-
-  # =========================
-  # Features
-  # =========================
+  # Feature Engineering Service
   features:
     build:
       context: .
       dockerfile: docker/Dockerfile.features
-
     container_name: ev-features
-
     depends_on:
       kafka:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     environment:
       NODE_ENV: production
-
       KAFKA_BROKERS: kafka:29092
-
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
-    restart: unless-stopped
-
     networks:
       - ev-network
+    restart: unless-stopped
 
-
-  # =========================
-  # Scoring
-  # =========================
+  # Scoring Service
   scoring:
     build:
       context: .
       dockerfile: docker/Dockerfile.scoring
-
     container_name: ev-scoring
-
     depends_on:
       kafka:
         condition: service_healthy
       redis:
         condition: service_healthy
-
     environment:
       NODE_ENV: production
-
       KAFKA_BROKERS: kafka:29092
-
       REDIS_HOST: redis
       REDIS_PORT: 6379
-
-    restart: unless-stopped
-
     networks:
       - ev-network
+    restart: unless-stopped
 
-
-  # =========================
-  # Mock AI
-  # =========================
+  # Mock AI Service (for development)
   mock-ai:
     build:
       context: .
       dockerfile: docker/Dockerfile.mock-ai
-
     container_name: ev-mock-ai
-
     ports:
       - "8081:8081"
-
     environment:
       PORT: 8081
-
-    restart: unless-stopped
-
     networks:
       - ev-network
+    restart: unless-stopped
 
-
-# =========================
+# ==========================================
 # Volumes
-# =========================
+# ==========================================
 volumes:
   zookeeper-data:
   zookeeper-logs:
@@ -310,10 +233,9 @@ volumes:
   redis-data:
   postgres-data:
 
-
-# =========================
-# Network
-# =========================
+# ==========================================
+# Networks
+# ==========================================
 networks:
   ev-network:
     driver: bridge
