@@ -14,9 +14,11 @@ import {
   REDIS_KEYS,
   getMultiJSON
 } from '../../redis';
-import { config } from '../../config';
+// ...existing code...
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { weightedSum, round, nowTimestamp } from '../../utils/helpers';
+import { runModel } from '../../utils/modelRunner';
+import { config } from '../../config';
 import { 
   StationFeatures, 
   StationScore, 
@@ -34,19 +36,27 @@ let producer: Producer;
 const WEIGHTS = config.scoring.weights;
 
 /**
- * Get AI predictions from external services or cache
+ * Get AI predictions from local models
  */
-async function getAIPredictions(stationId: string): Promise<{
-  loadForecast: LoadForecast | null;
-  faultPrediction: FaultPrediction | null;
+async function getAIPredictions(stationId: string, features: StationFeatures): Promise<{
+  queuePrediction: any;
+  waitTimePrediction: any;
+  faultPrediction: any;
+  actionPrediction: any;
+  recommenderPrediction: any;
 }> {
-  // Try to get from cache first
-  const [loadForecast, faultPrediction] = await Promise.all([
-    getJSON<LoadForecast>(REDIS_KEYS.loadForecast(stationId)),
-    getJSON<FaultPrediction>(REDIS_KEYS.faultPrediction(stationId)),
+  // Prepare input for models
+  const inputData = {
+    ...features,
+  };
+  const [queuePrediction, waitTimePrediction, faultPrediction, actionPrediction, recommenderPrediction] = await Promise.all([
+    runModel(config.models.xgbQueue, inputData),
+    runModel(config.models.xgbWait, inputData),
+    runModel(config.models.lgbmFault, inputData),
+    runModel(config.models.xgbAction, inputData),
+    runModel(config.models.stationRecommender, inputData),
   ]);
-
-  return { loadForecast, faultPrediction };
+  return { queuePrediction, waitTimePrediction, faultPrediction, actionPrediction, recommenderPrediction };
 }
 
 /**
@@ -149,11 +159,25 @@ async function scoreStation(features: StationFeatures): Promise<StationScore> {
   // Calculate base overall score
   let overallScore = calculateOverallScore(componentScores);
 
-  // Get AI predictions
-  const { loadForecast, faultPrediction } = await getAIPredictions(features.stationId);
+  // Get AI predictions from all models
+  const predictions = await getAIPredictions(features.stationId, features);
 
-  // Apply prediction adjustments
-  overallScore = applyPredictionAdjustments(overallScore, loadForecast, faultPrediction);
+  // Example: adjust score using queue, wait, fault, action, recommender predictions
+  if (predictions.queuePrediction?.prediction?.[0] > 8) {
+    overallScore *= 0.8;
+  }
+  if (predictions.waitTimePrediction?.prediction?.[0] > 20) {
+    overallScore *= 0.85;
+  }
+  if (predictions.faultPrediction?.prediction?.[0] > 0.3) {
+    overallScore *= 0.7;
+  }
+  if (predictions.actionPrediction?.prediction?.[0] === 'MAINTENANCE_ALERT') {
+    overallScore *= 0.6;
+  }
+  if (predictions.recommenderPrediction?.prediction?.[0] < 0.5) {
+    overallScore *= 0.9;
+  }
 
   // Calculate confidence
   const confidence = calculateConfidence(features);

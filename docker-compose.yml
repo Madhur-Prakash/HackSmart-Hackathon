@@ -234,6 +234,20 @@ services:
       - ev-network
     restart: unless-stopped
 
+# Model API Service
+  model-api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.modelapi
+    container_name: ev-model-api
+    ports:
+      - "8001:8001"
+    environment:
+      MODEL_API_PORT: 8001
+    networks:
+      - ev-network
+    restart: unless-stopped
+    
   # Mock AI Service (for development)
   mock-ai:
     build:

@@ -18,6 +18,8 @@ import {
   FaultPrediction,
   RecommendationRequest
 } from '../../types';
+import { runModel } from '../../utils/modelRunner';
+import { config } from '../../config';
 
 const logger = createLogger('optimization-service');
 
@@ -171,10 +173,18 @@ export async function getTopKStations(
     }
 
     // Get features and predictions
-    const [features, loadForecast, faultPrediction] = await Promise.all([
+    const [features, loadForecast, faultPrediction, trafficPrediction, microTraffic, batteryRebalance, stockOrder, staffDiversion, tieupStorage, customerArrival, batteryDemand] = await Promise.all([
       getJSON<StationFeatures>(REDIS_KEYS.stationFeatures(stationId)),
       getJSON<LoadForecast>(REDIS_KEYS.loadForecast(stationId)),
       getJSON<FaultPrediction>(REDIS_KEYS.faultPrediction(stationId)),
+      runModel(config.models.trafficForecast, { stationId }),
+      runModel(config.models.microTraffic, { stationId }),
+      runModel(config.models.batteryRebalance, { stationId }),
+      runModel(config.models.stockOrder, { stationId }),
+      runModel(config.models.staffDiversion, { stationId }),
+      runModel(config.models.tieupStorage, { stationId }),
+      runModel(config.models.customerArrival, { stationId }),
+      runModel(config.models.batteryDemand, { stationId }),
     ]);
 
     // Calculate final distance-adjusted score
@@ -196,6 +206,14 @@ export async function getTopKStations(
       predictions: {
         load: loadForecast || {} as LoadForecast,
         fault: faultPrediction || {} as FaultPrediction,
+        traffic: trafficPrediction,
+        microTraffic: microTraffic,
+        batteryRebalance: batteryRebalance,
+        stockOrder: stockOrder,
+        staffDiversion: staffDiversion,
+        tieupStorage: tieupStorage,
+        customerArrival: customerArrival,
+        batteryDemand: batteryDemand,
       },
     });
   }

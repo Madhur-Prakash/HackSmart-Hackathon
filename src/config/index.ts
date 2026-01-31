@@ -87,6 +87,25 @@ export const config = {
     level: process.env.LOG_LEVEL || 'info',
     format: process.env.LOG_FORMAT || 'json',
   },
+
+  // Model Paths
+  models: {
+    dir: process.env.MODEL_DIR || './models',
+    xgbQueue: process.env.XGB_QUEUE_MODEL_PATH || './models/xgb_queue_tuned_model.pkl',
+    xgbWait: process.env.XGB_WAIT_MODEL_PATH || './models/xgb_wait_tuned_model.pkl',
+    lgbmFault: process.env.LGBM_FAULT_MODEL_PATH || './models/lgbm_fault_tuned_model.pkl',
+    xgbAction: process.env.XGB_ACTION_MODEL_PATH || './models/xgb_action_tuned_model.pkl',
+    trafficForecast: process.env.TRAFFIC_FORECAST_MODEL_PATH || './models/traffic_forecast_model.pkl',
+    microTraffic: process.env.MICRO_TRAFFIC_MODEL_PATH || './models/micro_traffic_model_improved.pkl',
+    batteryRebalance: process.env.BATTERY_REBALANCE_MODEL_PATH || './models/battery_rebalance_model.pkl',
+    stockOrder: process.env.STOCK_ORDER_MODEL_PATH || './models/stock_order_model.pkl',
+    staffDiversion: process.env.STAFF_DIVERSION_MODEL_PATH || './models/staff_diversion_model.pkl',
+    tieupStorage: process.env.TIEUP_STORAGE_MODEL_PATH || './models/tieup_storage_model.pkl',
+    customerArrival: process.env.CUSTOMER_ARRIVAL_MODEL_PATH || './models/customer_arrival_model.pkl',
+    batteryDemand: process.env.BATTERY_DEMAND_MODEL_PATH || './models/battery_demand_model.pkl',
+    stationRecommender: process.env.STATION_RECOMMENDER_MODEL_PATH || './models/station_recommender.pkl',
+    gemini: process.env.GEMINI_MODEL_PATH || './models/gemini_flash_llm.pkl',
+  },
 } as const;
 
 export type Config = typeof config;

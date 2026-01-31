@@ -1,15 +1,13 @@
-import Groq from 'groq-sdk';
 import { config } from '../../config';
+import { runModel } from '../../utils/modelRunner';
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { round, retry } from '../../utils/helpers';
 import { RankedStation, RecommendationRequest, StationScore } from '../../types';
 
 const logger = createLogger('llm-service');
 
-// Initialize Groq client
-const groq = new Groq({
-  apiKey: config.groq.apiKey,
-});
+// Gemini 2.5 Flash LLM integration
+
 
 /**
  * Context for generating explanations
@@ -19,6 +17,14 @@ export interface ExplanationContext {
   topStation: RankedStation;
   alternatives: RankedStation[];
   totalCandidates: number;
+  trafficPrediction?: any;
+  microTraffic?: any;
+  batteryRebalance?: any;
+  stockOrder?: any;
+  staffDiversion?: any;
+  tieupStorage?: any;
+  customerArrival?: any;
+  batteryDemand?: any;
 }
 
 /**
@@ -106,105 +112,7 @@ Generate a brief (3-4 sentence) executive summary that:
 4. Is professional and actionable`;
 }
 
-/**
- * Generate explanation for recommendation using LLM
- */
-export async function generateExplanation(context: ExplanationContext): Promise<string> {
-  const startTime = Date.now();
-
-  // If no Groq key, use fallback
-  if (!config.groq.apiKey || config.groq.apiKey === 'your-groq-api-key-here') {
-    return generateFallbackExplanation(context);
-  }
-
-  try {
-    const prompt = buildExplanationPrompt(context);
-
-    const response = await retry(
-      async () => {
-        return groq.chat.completions.create({
-          model: config.groq.model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that explains EV charging station recommendations in a clear, concise manner.',
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          // max_tokens: 200,
-          temperature: 0.7,
-        });
-      },
-      { maxRetries: 3, baseDelay: 1000 }
-    );
-
-    const explanation = response.choices[0]?.message?.content || generateFallbackExplanation(context);
-
-    const duration = Date.now() - startTime;
-    logMetrics(logger, 'llm.explanation.latency', duration);
-    logEvent(logger, 'explanation_generated', { 
-      method: 'groq',
-      tokens: response.usage?.total_tokens 
-    });
-
-    return explanation;
-
-  } catch (error) {
-    logger.error('LLM explanation failed, using fallback', { error });
-    return generateFallbackExplanation(context);
-  }
-}
-
-/**
- * Generate fallback explanation without LLM
- */
-function generateFallbackExplanation(context: ExplanationContext): string {
-  const { topStation, alternatives } = context;
-
-  if (!topStation) {
-    return 'No charging stations found matching your criteria. Please try expanding your search radius or adjusting your preferences.';
-  }
-
-  const parts: string[] = [];
-
-  // Main recommendation
-  parts.push(`${topStation.stationName} is recommended`);
-
-  // Distance
-  if (topStation.estimatedDistance < 5) {
-    parts.push(`because it's only ${topStation.estimatedDistance} km away`);
-  } else {
-    parts.push(`at ${topStation.estimatedDistance} km distance`);
-  }
-
-  // Wait time
-  if (topStation.estimatedWaitTime < 5) {
-    parts.push(`with minimal wait time (${topStation.estimatedWaitTime} minutes)`);
-  } else if (topStation.estimatedWaitTime < 15) {
-    parts.push(`with a ${topStation.estimatedWaitTime} minute estimated wait`);
-  }
-
-  // Availability
-  if (topStation.availableChargers > 3) {
-    parts.push(`and has ${topStation.availableChargers} chargers available`);
-  }
-
-  // Comparison with alternatives
-  if (alternatives.length > 0 && topStation.estimatedWaitTime < alternatives[0].estimatedWaitTime) {
-    const timeSaved = alternatives[0].estimatedWaitTime - topStation.estimatedWaitTime;
-    parts.push(`. This saves you approximately ${round(timeSaved, 0)} minutes compared to the next option`);
-  }
-
-  // Reliability mention if high
-  if (topStation.features?.stationReliabilityScore && topStation.features.stationReliabilityScore > 0.95) {
-    parts.push('. The station has excellent reliability');
-  }
-
-  return parts.join(' ') + '.';
-}
+// (Removed Groq/fallback logic and stray code fragments. Only Gemini/runModel logic remains.)
 
 /**
  * Generate admin summary using LLM
@@ -217,32 +125,13 @@ export async function generateAdminSummary(data: {
   topStations: Array<{ stationId: string; name: string; score: number }>;
   alertCount: number;
 }): Promise<string> {
-  // If no Groq key, use fallback
-  if (!config.groq.apiKey || config.groq.apiKey === 'your-groq-api-key-here') {
-    return generateFallbackAdminSummary(data);
-  }
 
   try {
     const prompt = buildAdminSummaryPrompt(data);
 
-    const response = await groq.chat.completions.create({
-      model: config.groq.model,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an AI assistant generating system health summaries for infrastructure administrators.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      max_tokens: 250,
-      temperature: 0.5,
-    });
-
-    return response.choices[0]?.message?.content || generateFallbackAdminSummary(data);
-
+    const result = await runModel(config.models.gemini, { prompt: buildAdminSummaryPrompt(data) });
+    logEvent(logger, 'llm.admin_summary.generated');
+    return result.summary || generateFallbackAdminSummary(data);
   } catch (error) {
     logger.error('LLM admin summary failed, using fallback', { error });
     return generateFallbackAdminSummary(data);
@@ -313,4 +202,20 @@ export function explainScoreBreakdown(score: StationScore): string {
   }
 
   return `This station scores ${round(score.overallScore * 100, 1)}% overall, featuring ${factors.join(', ')}.`;
+}
+
+/**
+ * Generate explanation for recommendation using Gemini model
+ */
+export async function generateExplanation(context: ExplanationContext): Promise<string> {
+  try {
+    const prompt = buildExplanationPrompt(context);
+    // Use Gemini model from models directory via runModel
+    const result = await runModel(config.models.gemini, { prompt, context });
+    logEvent(logger, 'llm.explanation.generated', { station: context.topStation?.stationId });
+    return result.explanation || 'No explanation generated.';
+  } catch (error) {
+    logger.error('Failed to generate explanation with Gemini', { error });
+    return 'No explanation generated.';
+  }
 }

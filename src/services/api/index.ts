@@ -609,7 +609,7 @@ export function createApiApp(): Application {
         services: {
           api: { status: 'up', lastHeartbeat: new Date().toISOString(), uptime: process.uptime() },
           database: { status: await checkConnection() ? 'up' : 'down', lastHeartbeat: new Date().toISOString(), uptime: 0 },
-          externalAI: { status: circuitStatus.state === 'closed' ? 'up' : 'degraded', lastHeartbeat: new Date().toISOString(), uptime: 0 },
+          externalAI: { status: (await circuitStatus).status === 'closed' ? 'up' : 'degraded', lastHeartbeat: new Date().toISOString(), uptime: 0 },
         },
       };
 

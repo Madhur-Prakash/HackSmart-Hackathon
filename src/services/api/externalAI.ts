@@ -1,122 +1,54 @@
-import axios, { AxiosInstance } from 'axios';
-import { 
-  circuitBreaker, 
-  ConsecutiveBreaker, 
-  retry, 
-  handleAll, 
-  wrap,
-  ExponentialBackoff
-} from 'cockatiel';
-import { config } from '../../config';
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { setWithTTL, getJSON, REDIS_KEYS } from '../../redis';
 import { LoadForecast, FaultPrediction } from '../../types';
+import { config } from '../../config';
+import { runModel } from '../../utils/modelRunner';
 
 const logger = createLogger('external-ai');
 
-// Create HTTP client with timeout
-const httpClient: AxiosInstance = axios.create({
-  timeout: 5000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Circuit breaker for external AI services
-const circuitBreakerPolicy = circuitBreaker(handleAll, {
-  halfOpenAfter: config.circuitBreaker.timeout,
-  breaker: new ConsecutiveBreaker(config.circuitBreaker.threshold),
-});
-
-// Retry policy
-const retryPolicy = retry(handleAll, {
-  maxAttempts: 3,
-  backoff: new ExponentialBackoff({
-    initialDelay: 500,
-    maxDelay: 5000,
-  }),
-});
-
-// Combined policy
-const resilientPolicy = wrap(retryPolicy, circuitBreakerPolicy);
-
 /**
- * Fetch load forecast from external AI service
+ * Fetch load forecast using local model
  */
 export async function fetchLoadForecast(stationId: string): Promise<LoadForecast | null> {
   const cacheKey = REDIS_KEYS.loadForecast(stationId);
-  
   // Check cache first
   const cached = await getJSON<LoadForecast>(cacheKey);
   if (cached) {
     logEvent(logger, 'load_forecast_cache_hit', { stationId });
     return cached;
   }
-
-  const startTime = Date.now();
-
   try {
-    const result = await resilientPolicy.execute(async () => {
-      const response = await httpClient.get<LoadForecast>(
-        `${config.aiServices.loadForecast}`,
-        { params: { stationId } }
-      );
-      return response.data;
-    });
-
-    // Cache the result
+    const inputData = { stationId };
+    const result = await runModel(config.models.xgbQueue, inputData);
     await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
-
-    const duration = Date.now() - startTime;
-    logMetrics(logger, 'ai.load_forecast.latency', duration, { stationId });
-
+    logEvent(logger, 'load_forecast_model_inference', { stationId });
     return result;
-
   } catch (error) {
-    logger.error('Failed to fetch load forecast', { stationId, error });
-    
-    // Return simulated prediction as fallback
-    return generateSimulatedLoadForecast(stationId);
+    logger.error('Failed to run queue model', { stationId, error });
+    return null;
   }
 }
 
 /**
- * Fetch fault probability from external AI service
+ * Fetch fault probability using local model
  */
 export async function fetchFaultProbability(stationId: string): Promise<FaultPrediction | null> {
   const cacheKey = REDIS_KEYS.faultPrediction(stationId);
-  
   // Check cache first
   const cached = await getJSON<FaultPrediction>(cacheKey);
   if (cached) {
     logEvent(logger, 'fault_prediction_cache_hit', { stationId });
     return cached;
   }
-
-  const startTime = Date.now();
-
   try {
-    const result = await resilientPolicy.execute(async () => {
-      const response = await httpClient.get<FaultPrediction>(
-        `${config.aiServices.faultProbability}`,
-        { params: { stationId } }
-      );
-      return response.data;
-    });
-
-    // Cache the result
+    const inputData = { stationId };
+    const result = await runModel(config.models.lgbmFault, inputData);
     await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
-
-    const duration = Date.now() - startTime;
-    logMetrics(logger, 'ai.fault_prediction.latency', duration, { stationId });
-
+    logEvent(logger, 'fault_prediction_model_inference', { stationId });
     return result;
-
   } catch (error) {
-    logger.error('Failed to fetch fault probability', { stationId, error });
-    
-    // Return simulated prediction as fallback
-    return generateSimulatedFaultPrediction(stationId);
+    logger.error('Failed to run fault model', { stationId, error });
+    return null;
   }
 }
 
@@ -131,7 +63,6 @@ export async function fetchAllPredictions(stationId: string): Promise<{
     fetchLoadForecast(stationId),
     fetchFaultProbability(stationId),
   ]);
-
   return { loadForecast, faultPrediction };
 }
 
@@ -142,14 +73,12 @@ export async function batchFetchPredictions(
   stationIds: string[]
 ): Promise<Map<string, { loadForecast: LoadForecast | null; faultPrediction: FaultPrediction | null }>> {
   const results = new Map();
-
   await Promise.all(
     stationIds.map(async (stationId) => {
       const predictions = await fetchAllPredictions(stationId);
       results.set(stationId, predictions);
     })
   );
-
   return results;
 }
 
@@ -188,22 +117,14 @@ function generateSimulatedFaultPrediction(stationId: string): FaultPrediction {
   return {
     stationId,
     faultProbability: probability,
-    predictedFaultType: probability > 0.1 ? 'charger_malfunction' : undefined,
     riskLevel,
     confidence: 0.8,
     timestamp: Math.floor(Date.now() / 1000),
   };
 }
 
-/**
- * Get circuit breaker status
- */
-export function getCircuitBreakerStatus(): {
-  state: string;
-  failures: number;
-} {
-  return {
-    state: String(circuitBreakerPolicy.state),
-    failures: 0, // Would need to track this separately
-  };
+// Add a stub for getCircuitBreakerStatus if needed by API
+export async function getCircuitBreakerStatus(): Promise<{ status: string }> {
+  // This is a stub. Replace with real logic if needed.
+  return { status: 'ok' };
 }

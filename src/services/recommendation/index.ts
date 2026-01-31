@@ -1,11 +1,13 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
-import { config } from '../../config';
+// ...existing code...
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { generateId, nowTimestamp } from '../../utils/helpers';
 import { validate, recommendationRequestSchema } from '../../utils/validation';
 import { optimizeForRequest, applyUserPreferences } from '../optimization';
+import { runModel } from '../../utils/modelRunner';
+import { config } from '../../config';
 import { generateExplanation, ExplanationContext } from '../llm';
 import { userRequestRepository, recommendationLogRepository } from '../../db';
 import { setWithTTL, getJSON, REDIS_KEYS } from '../../redis';
@@ -44,6 +46,29 @@ async function processRecommendation(
     // Get optimized stations
     let rankedStations = await optimizeForRequest(request);
 
+    // Integrate admin-facing models for operational intelligence
+    const trafficPrediction = await runModel(config.models.trafficForecast, request);
+    const microTraffic = await runModel(config.models.microTraffic, request);
+    const batteryRebalance = await runModel(config.models.batteryRebalance, request);
+    const stockOrder = await runModel(config.models.stockOrder, request);
+    const staffDiversion = await runModel(config.models.staffDiversion, request);
+    const tieupStorage = await runModel(config.models.tieupStorage, request);
+    const customerArrival = await runModel(config.models.customerArrival, request);
+    const batteryDemand = await runModel(config.models.batteryDemand, request);
+
+    // Attach predictions to recommendation response
+    rankedStations = rankedStations.map(station => ({
+      ...station,
+      trafficPrediction,
+      microTraffic,
+      batteryRebalance,
+      stockOrder,
+      staffDiversion,
+      tieupStorage,
+      customerArrival,
+      batteryDemand,
+    }));
+
     // Apply any user preferences (if we had user profile data)
     rankedStations = applyUserPreferences(rankedStations, {
       preferFast: request.preferredChargerType === 'fast',
@@ -56,6 +81,14 @@ async function processRecommendation(
       topStation: rankedStations[0],
       alternatives: rankedStations.slice(1, 3),
       totalCandidates: rankedStations.length,
+      trafficPrediction,
+      microTraffic,
+      batteryRebalance,
+      stockOrder,
+      staffDiversion,
+      tieupStorage,
+      customerArrival,
+      batteryDemand,
     };
 
     const explanation = await generateExplanation(explanationContext);

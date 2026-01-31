@@ -146,6 +146,14 @@ export interface RankedStation {
   predictions: {
     load: LoadForecast;
     fault: FaultPrediction;
+    traffic?: any;
+    microTraffic?: any;
+    batteryRebalance?: any;
+    stockOrder?: any;
+    staffDiversion?: any;
+    tieupStorage?: any;
+    customerArrival?: any;
+    batteryDemand?: any;
   };
 }
 
