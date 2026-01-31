@@ -1,53 +1,84 @@
-// Migration stubs for new tables
-export async function up(knex) {
-  await knex.schema.createTable('fault_tickets', (table) => {
-    table.string('id').primary();
-    table.string('station_id');
-    table.string('reported_by');
-    table.enu('fault_level', ['low', 'medium', 'high', 'critical']);
-    table.text('description');
-    table.enu('status', ['open', 'in_progress', 'resolved', 'closed']);
-    table.timestamp('created_at');
-    table.timestamp('updated_at');
+import { Knex } from "knex";
+
+/**
+ * Run migrations (CREATE tables)
+ */
+export async function up(knex: Knex): Promise<void> {
+  // Fault Tickets
+  await knex.schema.createTable("fault_tickets", (table: Knex.CreateTableBuilder) => {
+    table.string("id").primary();
+    table.string("station_id");
+    table.string("reported_by");
+    table.enu("fault_level", ["low", "medium", "high", "critical"]);
+    table.text("description");
+    table.enu("status", ["open", "in_progress", "resolved", "closed"]);
+    table.timestamp("created_at").defaultTo(knex.fn.now());
+    table.timestamp("updated_at").defaultTo(knex.fn.now());
   });
-  await knex.schema.createTable('deliveries', (table) => {
-    table.string('id').primary();
-    table.string('battery_id');
-    table.string('from_shop_id');
-    table.string('to_station_id');
-    table.string('assigned_driver_id');
-    table.enu('status', ['pending', 'accepted', 'in_transit', 'delivered', 'cancelled']);
-    table.timestamp('requested_at');
-    table.timestamp('accepted_at');
-    table.timestamp('delivered_at');
+
+  // Deliveries
+  await knex.schema.createTable("deliveries", (table: Knex.CreateTableBuilder) => {
+    table.string("id").primary();
+    table.string("battery_id");
+    table.string("from_shop_id");
+    table.string("to_station_id");
+    table.string("assigned_driver_id");
+    table.enu("status", [
+      "pending",
+      "accepted",
+      "in_transit",
+      "delivered",
+      "cancelled",
+    ]);
+    table.timestamp("requested_at");
+    table.timestamp("accepted_at");
+    table.timestamp("delivered_at");
   });
-  await knex.schema.createTable('notifications', (table) => {
-    table.string('id').primary();
-    table.string('user_id');
-    table.enu('type', ['ticket', 'delivery', 'queue', 'system']);
-    table.text('message');
-    table.boolean('read');
-    table.timestamp('created_at');
+
+  // Notifications
+  await knex.schema.createTable("notifications", (table: Knex.CreateTableBuilder) => {
+    table.string("id").primary();
+    table.string("user_id");
+    table.enu("type", ["ticket", "delivery", "queue", "system"]);
+    table.text("message");
+    table.boolean("read").defaultTo(false);
+    table.timestamp("created_at").defaultTo(knex.fn.now());
   });
-  await knex.schema.createTable('qr_queue', (table) => {
-    table.string('id').primary();
-    table.string('station_id');
-    table.string('user_id');
-    table.string('qr_code');
-    table.enu('status', ['waiting', 'verified', 'swapped', 'cancelled']);
-    table.timestamp('joined_at');
-    table.timestamp('verified_at');
-    table.timestamp('swapped_at');
+
+  // QR Queue
+  await knex.schema.createTable("qr_queue", (table: Knex.CreateTableBuilder) => {
+    table.string("id").primary();
+    table.string("station_id");
+    table.string("user_id");
+    table.string("qr_code");
+    table.enu("status", ["waiting", "verified", "swapped", "cancelled"]);
+    table.timestamp("joined_at").defaultTo(knex.fn.now());
+    table.timestamp("verified_at");
+    table.timestamp("swapped_at");
   });
-  await knex.schema.createTable('drivers', (table) => {
-    table.string('id').primary();
-    table.string('name');
-    table.string('phone');
-    table.string('vehicle_id');
-    table.boolean('active');
-    table.timestamp('registered_at');
+
+  // Drivers
+  await knex.schema.createTable("drivers", (table: Knex.CreateTableBuilder) => {
+    table.string("id").primary();
+    table.string("name");
+    table.string("phone");
+    table.string("vehicle_id");
+    table.boolean("active").defaultTo(true);
+    table.timestamp("registered_at").defaultTo(knex.fn.now());
   });
 }
+
+/**
+ * Rollback migrations (DROP tables)
+ */
+export async function down(knex: Knex): Promise<void> {
+  await knex.schema.dropTableIfExists("drivers");
+  await knex.schema.dropTableIfExists("qr_queue");
+  await knex.schema.dropTableIfExists("notifications");
+  await knex.schema.dropTableIfExists("deliveries");
+  await knex.schema.dropTableIfExists("fault_tickets");
+}
+
 import { getDb, TABLES } from './client';
 import { createLogger } from '../utils/logger';
 
