@@ -1,20 +1,24 @@
-# 📘 EV Charging Platform - Implementation Guide
+# 📘 EV Charging & Battery Swap Platform - Implementation Guide
 
-Complete technical documentation for the real-time EV charging recommendation system.
+Complete technical documentation for the real-time EV charging recommendation and battery swap management system.
 
-> **Navigation:** [README](../README.md) | [Workflow](WORKFLOW.md) | [API Reference](API_REFERENCE.md)
+> **Navigation:** [README](../README.md) | [Workflow](WORKFLOW.md) | [API Reference](API_REFERENCE.md) | [Integration Guide](../INTEGRATION_GUIDE.md)
 
 ## Table of Contents
 
 1. [System Overview](#system-overview)
-2. [Data Flow](#data-flow)
-3. [Feature Engineering](#feature-engineering)
-4. [Scoring Algorithm](#scoring-algorithm)
-5. [Optimization Engine](#optimization-engine)
-6. [LLM Integration](#llm-integration)
-7. [Caching Strategy](#caching-strategy)
-8. [Error Handling](#error-handling)
-9. [Scaling Considerations](#scaling-considerations)
+2. [AI/ML Models](#aiml-models)
+3. [Data Flow](#data-flow)
+4. [Feature Engineering](#feature-engineering)
+5. [Scoring Algorithm](#scoring-algorithm)
+6. [Optimization Engine](#optimization-engine)
+7. [LLM Integration](#llm-integration)
+8. [Queue Management](#queue-management)
+9. [Delivery System](#delivery-system)
+10. [Fault Management](#fault-management)
+11. [Caching Strategy](#caching-strategy)
+12. [Error Handling](#error-handling)
+13. [Scaling Considerations](#scaling-considerations)
 
 ---
 
@@ -27,6 +31,30 @@ Complete technical documentation for the real-time EV charging recommendation sy
 3. **Cache-First**: Redis for hot data, PostgreSQL for cold
 4. **Resilient**: Circuit breakers for external dependencies
 5. **Observable**: Structured logging and metrics
+6. **AI-Powered**: 11+ ML models for predictions and optimization
+
+---
+
+## AI/ML Models
+
+### Model Architecture Overview
+
+The platform uses 11 specialized ML models:
+
+| Model | Type | Purpose |
+|-------|------|----------|
+| **XGBoost Queue** | Regression | Predict queue length |
+| **XGBoost Wait** | Regression | Predict wait time |
+| **LightGBM Fault** | Classification | Predict fault probability |
+| **Traffic Forecast** | Time Series | Predict traffic patterns |
+| **Micro Traffic** | Regression | Hyperlocal traffic |
+| **Battery Rebalance** | Optimization | Battery inventory |
+| **Stock Order** | Regression | Battery stock needs |
+| **Staff Diversion** | Optimization | Staff allocation |
+| **Customer Arrival** | Time Series | Arrival prediction |
+| **Battery Demand** | Regression | Demand forecasting |
+| **Station Recommender** | Recommendation | Station ranking |
+| **Gemini Flash LLM** | NLP | Explanation generation |
 
 ### Service Communication
 
@@ -250,6 +278,13 @@ function calculateDistanceAdjustedScore(
 ---
 
 ## LLM Integration
+
+### Gemini Flash LLM
+
+The platform uses **Google Gemini Flash** (not Groq) for generating human-readable explanations.
+
+**Model**: `gemini_flash_llm.pkl`  
+**Purpose**: Convert technical recommendations into user-friendly explanations
 
 ### Explanation Generation Flow
 
@@ -531,3 +566,58 @@ This documentation provides a complete technical reference for understanding, ma
 ---
 
 > **Navigation:** [Back to README](../README.md) | [Workflow Documentation](WORKFLOW.md) | [API Reference](API_REFERENCE.md)
+
+
+---
+
+## Queue Management
+
+### QR Code Generation
+
+**Library**: `qrcode` npm package  
+**Storage**: File system at `/qrcodes/*.png`
+
+```typescript
+import QRCode from 'qrcode';
+
+export async function generateAndSaveQR(qrCode: string): Promise<string> {
+  const qrPath = path.join(qrDir, `${qrCode}.png`);
+  await QRCode.toFile(qrPath, qrCode);  // Creates scannable PNG
+  return qrPath;
+}
+```
+
+**Flow**: Create entry → Generate QR image → Return path → User displays → Staff scans → Verify in DB → Delete image
+
+---
+
+## Delivery System
+
+**Database Tables**: `deliveries`, `drivers`, `notifications`  
+**Status Flow**: `pending` → `accepted` → `in_transit` → `delivered`
+
+**Key Features**:
+- Broadcast to all active drivers
+- First-come-first-served acceptance
+- Admin confirmation required
+- Automatic notifications
+
+---
+
+## Fault Management
+
+**Severity Levels**: `low`, `medium`, `high`, `critical`  
+**Ticket Creation**: Only for `critical` faults  
+**Database Table**: `fault_tickets`
+
+**Logic**:
+```typescript
+if (faultLevel === 'critical') {
+  await createTicket();
+  await notifyAdmin();
+}
+```
+
+---
+
+> **Navigation:** [Back to README](../README.md) | [Workflow Documentation](WORKFLOW.md) | [API Reference](API_REFERENCE.md) | [Integration Guide](../INTEGRATION_GUIDE.md)
