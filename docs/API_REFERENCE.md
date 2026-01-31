@@ -1,13 +1,15 @@
 # API Reference
 
-Complete API documentation for the EV Charging Platform.
+Complete API documentation for the EV Charging Platform with Battery Swap Queue Management.
 
-> **Navigation:** [README](../README.md) | [Implementation Guide](IMPLEMENTATION.md) | [Workflow](WORKFLOW.md)
+> **Navigation:** [README](../README.md) | [Implementation Guide](IMPLEMENTATION.md) | [Workflow](WORKFLOW.md) | [Integration Guide](../INTEGRATION_GUIDE.md)
 
 ## Base URL
 
 ```
-Development: http://localhost:3000
+Development: http://localhost:3000 (API Gateway)
+Development: http://localhost:3001 (Ingestion Service)
+Development: http://localhost:3005 (Recommendation Service)
 Production:  https://api.ev-platform.com
 ```
 
@@ -329,6 +331,351 @@ Submit feedback on recommendation quality.
 
 ---
 
+## Queue Management Endpoints
+
+### POST `/queue/join`
+
+User confirms arrival at station and receives QR code for queue entry.
+
+**Request Body:**
+
+```json
+{
+  "stationId": "ST_101",
+  "userId": "USR_001"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "qrCode": "QR_abc123xyz",
+  "qrImagePath": "/qrcodes/QR_abc123xyz.png",
+  "entry": {
+    "id": "QUEUE_xyz789",
+    "stationId": "ST_101",
+    "userId": "USR_001",
+    "qrCode": "QR_abc123xyz",
+    "status": "waiting",
+    "joinedAt": "2024-01-28T10:00:00Z"
+  }
+}
+```
+
+**Edge Cases:**
+- Missing stationId or userId returns 400
+- QR code image is generated and saved to disk
+- QR code can be scanned by any QR scanner app
+
+---
+
+### POST `/queue/verify`
+
+Station staff verifies user's QR code and updates queue status.
+
+**Request Body:**
+
+```json
+{
+  "qrCode": "QR_abc123xyz"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "entry": {
+    "id": "QUEUE_xyz789",
+    "stationId": "ST_101",
+    "userId": "USR_001",
+    "qrCode": "QR_abc123xyz",
+    "status": "verified",
+    "joinedAt": "2024-01-28T10:00:00Z",
+    "verifiedAt": "2024-01-28T10:05:00Z"
+  },
+  "busyCount": 3,
+  "queue": [...]
+}
+```
+
+**Edge Cases:**
+- Invalid QR code returns 404
+- QR code image is deleted after verification
+- Returns live queue count for the station
+
+---
+
+### POST `/queue/swap`
+
+Mark battery swap as complete and dequeue user.
+
+**Request Body:**
+
+```json
+{
+  "qrCode": "QR_abc123xyz"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "entry": {
+    "id": "QUEUE_xyz789",
+    "status": "swapped",
+    "swappedAt": "2024-01-28T10:10:00Z"
+  },
+  "busyCount": 2,
+  "queue": [...]
+}
+```
+
+---
+
+## Delivery Management Endpoints
+
+### POST `/delivery/alert`
+
+Create delivery job and alert nearby drivers.
+
+**Request Body:**
+
+```json
+{
+  "batteryId": "BAT_001",
+  "fromShopId": "SHOP_001",
+  "toStationId": "ST_101"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "delivery": {
+    "id": "DELIV_xyz789",
+    "batteryId": "BAT_001",
+    "fromShopId": "SHOP_001",
+    "toStationId": "ST_101",
+    "status": "pending",
+    "requestedAt": "2024-01-28T10:00:00Z"
+  },
+  "message": "Delivery alert sent to drivers."
+}
+```
+
+---
+
+### POST `/delivery/accept`
+
+Driver accepts a delivery job.
+
+**Request Body:**
+
+```json
+{
+  "deliveryId": "DELIV_xyz789",
+  "driverId": "DRV_001"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "delivery": {
+    "id": "DELIV_xyz789",
+    "assignedDriverId": "DRV_001",
+    "status": "accepted",
+    "acceptedAt": "2024-01-28T10:05:00Z"
+  },
+  "message": "Delivery accepted and admin notified."
+}
+```
+
+**Edge Cases:**
+- Delivery already accepted returns 400
+- Delivery not found returns 404
+- Admin receives notification
+
+---
+
+### POST `/delivery/confirm`
+
+Admin confirms delivery completion.
+
+**Request Body:**
+
+```json
+{
+  "deliveryId": "DELIV_xyz789"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "delivery": {
+    "id": "DELIV_xyz789",
+    "status": "delivered",
+    "deliveredAt": "2024-01-28T10:30:00Z"
+  },
+  "message": "Delivery confirmed and driver notified."
+}
+```
+
+---
+
+### GET `/driver/:driverId/deliveries`
+
+Get all deliveries for a specific driver.
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "deliveries": [
+    {
+      "id": "DELIV_xyz789",
+      "batteryId": "BAT_001",
+      "fromShopId": "SHOP_001",
+      "toStationId": "ST_101",
+      "status": "accepted",
+      "assignedDriverId": "DRV_001",
+      "requestedAt": "2024-01-28T10:00:00Z",
+      "acceptedAt": "2024-01-28T10:05:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### GET `/admin/deliveries`
+
+Get all deliveries (admin only).
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "deliveries": [...]
+}
+```
+
+---
+
+## Fault Management Endpoints
+
+### POST `/fault/report`
+
+Report a station fault. Critical faults automatically create tickets.
+
+**Request Body:**
+
+```json
+{
+  "stationId": "ST_101",
+  "reportedBy": "USR_001",
+  "faultLevel": "critical",
+  "description": "Charger not responding, error code E502"
+}
+```
+
+**Fault Levels:** `low`, `medium`, `high`, `critical`
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "ticketCreated": true,
+  "ticket": {
+    "id": "TICKET_xyz789",
+    "stationId": "ST_101",
+    "reportedBy": "USR_001",
+    "faultLevel": "critical",
+    "description": "Charger not responding, error code E502",
+    "status": "open",
+    "createdAt": "2024-01-28T10:00:00Z",
+    "updatedAt": "2024-01-28T10:00:00Z"
+  },
+  "message": "Critical fault, ticket raised and admin notified."
+}
+```
+
+**Edge Cases:**
+- Only critical faults create tickets
+- Non-critical faults are logged but don't create tickets
+- Admin receives notification for critical faults
+
+---
+
+### POST `/ticket/manual`
+
+Manually raise a fault ticket (admin/staff).
+
+**Request Body:**
+
+```json
+{
+  "stationId": "ST_101",
+  "reportedBy": "STAFF_001",
+  "faultLevel": "high",
+  "description": "Preventive maintenance required"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "ticket": {...},
+  "message": "Ticket raised and admin notified."
+}
+```
+
+---
+
+### GET `/admin/tickets`
+
+Get all fault tickets (admin only).
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "tickets": [
+    {
+      "id": "TICKET_xyz789",
+      "stationId": "ST_101",
+      "reportedBy": "USR_001",
+      "faultLevel": "critical",
+      "description": "Charger not responding",
+      "status": "open",
+      "createdAt": "2024-01-28T10:00:00Z",
+      "updatedAt": "2024-01-28T10:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
 ## Admin Endpoints
 
 ### Station Information
@@ -630,6 +977,41 @@ All error responses follow this format:
 | 404 | Not Found |
 | 429 | Too Many Requests |
 | 500 | Internal Server Error |
+| 503 | Service Unavailable |
+
+---
+
+## Edge Cases & Error Handling
+
+### Queue Management
+- **Duplicate QR Join**: User can join multiple times, each gets unique QR
+- **Invalid QR Verification**: Returns 404 with clear error message
+- **QR Already Used**: Status prevents re-verification
+- **Station Not Found**: Validated before queue entry creation
+- **QR Image Cleanup**: Images deleted after verification to save disk space
+
+### Delivery Management
+- **No Active Drivers**: Delivery created but no notifications sent
+- **Delivery Already Accepted**: Returns 400 to prevent double assignment
+- **Driver Not Found**: Validated before acceptance
+- **Concurrent Acceptance**: First driver wins, others get error
+
+### Fault Management
+- **Non-Critical Faults**: Logged but don't create tickets
+- **Duplicate Reports**: Each creates separate entry for tracking
+- **Invalid Fault Level**: Validation error returned
+- **Station Offline**: Fault can still be reported
+
+### Recommendations
+- **No Stations Available**: Returns empty array with explanation
+- **Invalid Coordinates**: Validation error with bounds check
+- **Expired Cache**: Automatically regenerates recommendation
+- **AI Service Down**: Falls back to rule-based scoring
+
+### Database Failures
+- **Connection Lost**: Returns 503 with retry-after header
+- **Transaction Rollback**: Ensures data consistency
+- **Constraint Violations**: Returns 400 with specific field errors
 
 ---
 
@@ -661,4 +1043,11 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 
 ---
 
-> **Navigation:** [Back to README](../README.md) | [Implementation Guide](IMPLEMENTATION.md) | [Workflow Documentation](WORKFLOW.md)
+> **Navigation:** [Back to README](../README.md) | [Implementation Guide](IMPLEMENTATION.md) | [Workflow Documentation](WORKFLOW.md) | [Integration Guide](../INTEGRATION_GUIDE.md)
+
+## Additional Resources
+
+- **Interactive API Docs**: http://localhost:3000/docs (Swagger UI)
+- **Recommendation Service Docs**: http://localhost:3005/docs
+- **Ingestion Service Docs**: http://localhost:3001/docs
+- **Complete Integration Guide**: [INTEGRATION_GUIDE.md](../INTEGRATION_GUIDE.md)
