@@ -20,7 +20,7 @@ import {
   Delivery,
   QRQueueEntry
 } from '../../types';
-import { qrQueueRepository, notificationRepository, deliveryRepository, driverRepository, faultTicketRepository} from '@db/repositories';
+import { qrQueueRepository, notificationRepository, deliveryRepository, driverRepository, faultTicketRepository } from '../../db/repositories';
 
 const logger = createLogger('recommendation-service');
 
