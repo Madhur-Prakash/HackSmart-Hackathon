@@ -79,4 +79,9 @@ export const TABLES = {
   recommendationLogs: 'recommendation_logs',
   systemEvents: 'system_events',
   users: 'users',
+  faultTickets: 'fault_tickets',
+  deliveries: 'deliveries',
+  notifications: 'notifications',
+  qrQueue: 'qr_queue',
+  drivers: 'drivers',
 } as const;

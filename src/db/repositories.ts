@@ -1,8 +1,153 @@
 import { getDb, TABLES, closeDb, checkConnection } from './client';
-import { Station, StationHistoryRecord, UserRequestRecord, RecommendationLogRecord, SystemEventRecord } from '../types';
+import { Station, StationHistoryRecord, UserRequestRecord, RecommendationLogRecord, SystemEventRecord, FaultTicket, Delivery, Notification, QRQueueEntry, Driver } from '../types';
 import { createLogger } from '../utils/logger';
 
 const logger = createLogger('repository');
+
+// ============================================
+// Fault Ticket Repository
+// ============================================
+export const faultTicketRepository = {
+  async create(ticket: FaultTicket): Promise<void> {
+    const db = getDb();
+    await db(TABLES.faultTickets).insert(ticket);
+  },
+  async findById(id: string): Promise<FaultTicket | null> {
+    const db = getDb();
+    const row = await db(TABLES.faultTickets).where('id', id).first();
+    return row ? row as FaultTicket : null;
+  },
+  async findByStation(stationId: string): Promise<FaultTicket[]> {
+    const db = getDb();
+    const rows = await db(TABLES.faultTickets).where('stationId', stationId);
+    return rows as FaultTicket[];
+  },
+  async updateStatus(id: string, status: string): Promise<void> {
+    const db = getDb();
+    await db(TABLES.faultTickets).where('id', id).update({ status });
+  },
+  async findAll(): Promise<FaultTicket[]> {
+    const db = getDb();
+    const rows = await db(TABLES.faultTickets).select('*');
+    return rows as FaultTicket[];
+  },
+};
+
+// ============================================
+// Delivery Repository
+// ============================================
+export const deliveryRepository = {
+  async create(delivery: Delivery): Promise<void> {
+    const db = getDb();
+    await db(TABLES.deliveries).insert(delivery);
+  },
+  async findById(id: string): Promise<Delivery | null> {
+    const db = getDb();
+    const row = await db(TABLES.deliveries).where('id', id).first();
+    return row ? row as Delivery : null;
+  },
+  async findByDriver(driverId: string): Promise<Delivery[]> {
+    const db = getDb();
+    const rows = await db(TABLES.deliveries).where('assignedDriverId', driverId);
+    return rows as Delivery[];
+  },
+  async findByStation(stationId: string): Promise<Delivery[]> {
+    const db = getDb();
+    const rows = await db(TABLES.deliveries).where('toStationId', stationId);
+    return rows as Delivery[];
+  },
+  async updateStatus(id: string, status: string): Promise<void> {
+    const db = getDb();
+    await db(TABLES.deliveries).where('id', id).update({ status });
+  },
+  async findAll(): Promise<Delivery[]> {
+    const db = getDb();
+    const rows = await db(TABLES.deliveries).select('*');
+    return rows as Delivery[];
+  },
+};
+
+// ============================================
+// Notification Repository
+// ============================================
+export const notificationRepository = {
+  async create(notification: Notification): Promise<void> {
+    const db = getDb();
+    await db(TABLES.notifications).insert(notification);
+  },
+  async findByUser(userId: string): Promise<Notification[]> {
+    const db = getDb();
+    const rows = await db(TABLES.notifications).where('userId', userId);
+    return rows as Notification[];
+  },
+  async markRead(id: string): Promise<void> {
+    const db = getDb();
+    await db(TABLES.notifications).where('id', id).update({ read: true });
+  },
+  async findAll(): Promise<Notification[]> {
+    const db = getDb();
+    const rows = await db(TABLES.notifications).select('*');
+    return rows as Notification[];
+  },
+};
+
+// ============================================
+// QR Queue Repository
+// ============================================
+export const qrQueueRepository = {
+  async create(entry: QRQueueEntry): Promise<void> {
+    const db = getDb();
+    await db(TABLES.qrQueue).insert(entry);
+  },
+  async findByStation(stationId: string): Promise<QRQueueEntry[]> {
+    const db = getDb();
+    const rows = await db(TABLES.qrQueue).where('stationId', stationId);
+    return rows as QRQueueEntry[];
+  },
+  async findByUser(userId: string): Promise<QRQueueEntry[]> {
+    const db = getDb();
+    const rows = await db(TABLES.qrQueue).where('userId', userId);
+    return rows as QRQueueEntry[];
+  },
+  async updateStatus(id: string, status: string): Promise<void> {
+    const db = getDb();
+    await db(TABLES.qrQueue).where('id', id).update({ status });
+  },
+  async findByQRCode(qrCode: string): Promise<QRQueueEntry | null> {
+    const db = getDb();
+    const row = await db(TABLES.qrQueue).where('qrCode', qrCode).first();
+    return row ? row as QRQueueEntry : null;
+  },
+  async findAll(): Promise<QRQueueEntry[]> {
+    const db = getDb();
+    const rows = await db(TABLES.qrQueue).select('*');
+    return rows as QRQueueEntry[];
+  },
+};
+
+// ============================================
+// Driver Repository
+// ============================================
+export const driverRepository = {
+  async create(driver: Driver): Promise<void> {
+    const db = getDb();
+    await db(TABLES.drivers).insert(driver);
+  },
+  async findById(id: string): Promise<Driver | null> {
+    const db = getDb();
+    const row = await db(TABLES.drivers).where('id', id).first();
+    return row ? row as Driver : null;
+  },
+  async findAll(): Promise<Driver[]> {
+    const db = getDb();
+    const rows = await db(TABLES.drivers).select('*');
+    return rows as Driver[];
+  },
+  async setActive(id: string, active: boolean): Promise<void> {
+    const db = getDb();
+    await db(TABLES.drivers).where('id', id).update({ active });
+  },
+};
 
 // ============================================
 // Station Repository

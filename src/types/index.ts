@@ -1,3 +1,59 @@
+// Fault ticket for station issues
+export interface FaultTicket {
+  id: string;
+  stationId: string;
+  reportedBy: string;
+  faultLevel: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Delivery job for battery transport
+export interface Delivery {
+  id: string;
+  batteryId: string;
+  fromShopId: string;
+  toStationId: string;
+  assignedDriverId?: string;
+  status: 'pending' | 'accepted' | 'in_transit' | 'delivered' | 'cancelled';
+  requestedAt: string;
+  acceptedAt?: string;
+  deliveredAt?: string;
+}
+
+// Notification for admin/driver/user
+export interface Notification {
+  id: string;
+  userId: string;
+  type: 'ticket' | 'delivery' | 'queue' | 'system';
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
+// QR queue entry for live station queue
+export interface QRQueueEntry {
+  id: string;
+  stationId: string;
+  userId: string;
+  qrCode: string;
+  status: 'waiting' | 'verified' | 'swapped' | 'cancelled';
+  joinedAt: string;
+  verifiedAt?: string;
+  swappedAt?: string;
+}
+
+// Driver for battery delivery
+export interface Driver {
+  id: string;
+  name: string;
+  phone: string;
+  vehicleId: string;
+  active: boolean;
+  registeredAt: string;
+}
 // ============================================
 // Core Domain Types for EV Charging Platform
 // ============================================

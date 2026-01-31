@@ -10,7 +10,7 @@ export const config = {
   ports: {
     api: parseInt(process.env.API_PORT || '3000', 10),
     ingestion: parseInt(process.env.INGESTION_PORT || '3001', 10),
-    recommendation: parseInt(process.env.RECOMMENDATION_PORT || '3005', 10),
+    recommendation: parseInt(process.env.RECOMMENDATION_PORT || '3002', 10),
   },
 
   // Kafka Configuration

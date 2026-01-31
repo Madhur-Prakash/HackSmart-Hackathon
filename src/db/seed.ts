@@ -153,6 +153,112 @@ const sampleUsers = [
 ];
 
 /**
+ * Seed data for new features: tickets, deliveries, notifications, QR queue, drivers
+ */
+const sampleFaultTickets = [
+  {
+    id: uuidv4(),
+    stationId: 'ST_101',
+    reportedBy: 'admin',
+    faultLevel: 'critical',
+    description: 'Major power failure',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: uuidv4(),
+    stationId: 'ST_102',
+    reportedBy: 'user_1',
+    faultLevel: 'medium',
+    description: 'Charger 3 not working',
+    status: 'open',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+const sampleDeliveries = [
+  {
+    id: uuidv4(),
+    batteryId: 'BAT_001',
+    fromShopId: 'SHOP_1',
+    toStationId: 'ST_101',
+    assignedDriverId: 'DRV_1',
+    status: 'pending',
+    requestedAt: new Date().toISOString(),
+  },
+  {
+    id: uuidv4(),
+    batteryId: 'BAT_002',
+    fromShopId: 'SHOP_2',
+    toStationId: 'ST_102',
+    assignedDriverId: 'DRV_2',
+    status: 'accepted',
+    requestedAt: new Date().toISOString(),
+    acceptedAt: new Date().toISOString(),
+  },
+];
+
+const sampleNotifications = [
+  {
+    id: uuidv4(),
+    userId: 'admin',
+    type: 'ticket',
+    message: 'Critical fault reported at ST_101',
+    read: false,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: uuidv4(),
+    userId: 'DRV_1',
+    type: 'delivery',
+    message: 'New delivery assigned',
+    read: false,
+    createdAt: new Date().toISOString(),
+  },
+];
+
+const sampleQRQueue = [
+  {
+    id: uuidv4(),
+    stationId: 'ST_101',
+    userId: 'user_1',
+    qrCode: 'QR1',
+    status: 'waiting',
+    joinedAt: new Date().toISOString(),
+  },
+  {
+    id: uuidv4(),
+    stationId: 'ST_102',
+    userId: 'user_2',
+    qrCode: 'QR2',
+    status: 'verified',
+    joinedAt: new Date().toISOString(),
+    verifiedAt: new Date().toISOString(),
+  },
+];
+
+const sampleDrivers = [
+  {
+    id: 'DRV_1',
+    name: 'Alice Driver',
+    phone: '555-1111',
+    vehicleId: 'VEH_1',
+    active: true,
+    registeredAt: new Date().toISOString(),
+  },
+  {
+    id: 'DRV_2',
+    name: 'Bob Transport',
+    phone: '555-2222',
+    vehicleId: 'VEH_2',
+    active: true,
+    registeredAt: new Date().toISOString(),
+  },
+];
+
+/**
  * Seed the database with sample data
  */
 export async function seedDatabase(): Promise<void> {
@@ -244,4 +350,15 @@ if (require.main === module) {
       logger.error('Seeding failed', { error });
       process.exit(1);
     });
+}
+
+// Seed new tables
+export async function seedNewFeatures() {
+  const db = getDb();
+  await db('fault_tickets').insert(sampleFaultTickets);
+  await db('deliveries').insert(sampleDeliveries);
+  await db('notifications').insert(sampleNotifications);
+  await db('qr_queue').insert(sampleQRQueue);
+  await db('drivers').insert(sampleDrivers);
+  logger.info('Seeded new feature tables');
 }
