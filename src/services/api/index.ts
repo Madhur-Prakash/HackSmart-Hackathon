@@ -1,4 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -33,13 +35,50 @@ import {
 import { createProducer, produceMessage, TOPICS } from '../../kafka';
 import { StationTelemetry, StationHealth, UserContext, AdminSummary, SystemMetrics } from '../../types';
 
+
 const logger = createLogger('api-gateway');
+
+// Swagger setup
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'EV Charging Platform API',
+      version: '1.0.0',
+      description: 'API documentation for the EV Charging Platform',
+    },
+    servers: [
+      { url: 'http://localhost:3000', description: 'API Gateway' },
+    ],
+  },
+  apis: [
+    // Only this file for now, can add more as needed
+    __filename.replace(/\\/g, '/'),
+  ],
+};
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
 
 /**
  * Create and configure the main API application
  */
+
+/**
+ * @swagger
+ * tags:
+ *   - name: Health
+ *     description: Health and readiness endpoints
+ *   - name: Ingestion
+ *     description: Data ingestion endpoints
+ *   - name: Recommendation
+ *     description: Recommendation endpoints
+ *   - name: Admin
+ *     description: Admin and metrics endpoints
+ */
 export function createApiApp(): Application {
   const app = express();
+
+  // Swagger UI
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Security middleware
   app.use(helmet());
@@ -86,6 +125,16 @@ export function createApiApp(): Application {
   // Health & Status Endpoints
   // ==========================================
 
+  /**
+   * @swagger
+   * /health:
+   *   get:
+   *     summary: Health check
+   *     tags: [Health]
+   *     responses:
+   *       200:
+   *         description: Service health
+   */
   app.get('/health', async (req: Request, res: Response) => {
     const dbHealthy = await checkConnection();
     
@@ -114,6 +163,22 @@ export function createApiApp(): Application {
   // ==========================================
 
   // Ingest station telemetry
+  /**
+   * @swagger
+   * /ingest/station:
+   *   post:
+   *     summary: Ingest station telemetry
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: Telemetry ingested
+   */
   app.post('/ingest/station', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validation = validate(stationIngestSchema, req.body);
@@ -158,6 +223,22 @@ export function createApiApp(): Application {
   });
 
   // Ingest user context
+  /**
+   * @swagger
+   * /ingest/user-context:
+   *   post:
+   *     summary: Ingest user context
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: User context ingested
+   */
   app.post('/ingest/user-context', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validation = validate(userContextSchema, req.body);
@@ -195,6 +276,29 @@ export function createApiApp(): Application {
   });
 
   // Get recommendations
+  /**
+   * @swagger
+   * /recommend:
+   *   get:
+   *     summary: Get recommendations
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: query
+   *         name: userId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: lat
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: lon
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: Recommendation response
+   */
   app.get('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
@@ -242,6 +346,22 @@ export function createApiApp(): Application {
     }
   });
 
+  /**
+   * @swagger
+   * /recommend:
+   *   post:
+   *     summary: Get recommendations (POST)
+   *     tags: [Recommendation]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Recommendation response
+   */
   app.post('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const startTime = Date.now();
@@ -279,6 +399,22 @@ export function createApiApp(): Application {
   // ==========================================
 
   // Get station score
+  /**
+   * @swagger
+   * /station/{id}/score:
+   *   get:
+   *     summary: Get station score
+   *     tags: [Admin]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Station score
+   */
   app.get('/station/:id/score', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -308,6 +444,22 @@ export function createApiApp(): Application {
   });
 
   // Get station health
+  /**
+   * @swagger
+   * /station/{id}/health:
+   *   get:
+   *     summary: Get station health
+   *     tags: [Admin]
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Station health
+   */
   app.get('/station/:id/health', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
@@ -349,6 +501,16 @@ export function createApiApp(): Application {
   });
 
   // Admin summary
+  /**
+   * @swagger
+   * /admin/summary:
+   *   get:
+   *     summary: Get admin summary
+   *     tags: [Admin]
+   *     responses:
+   *       200:
+   *         description: Admin summary
+   */
   app.get('/admin/summary', async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Get station counts
@@ -413,6 +575,16 @@ export function createApiApp(): Application {
   });
 
   // System metrics
+  /**
+   * @swagger
+   * /admin/metrics:
+   *   get:
+   *     summary: Get system metrics
+   *     tags: [Admin]
+   *     responses:
+   *       200:
+   *         description: System metrics
+   */
   app.get('/admin/metrics', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const redisInfo = await getRedisInfo();
@@ -452,6 +624,16 @@ export function createApiApp(): Application {
   });
 
   // List all stations
+  /**
+   * @swagger
+   * /admin/stations:
+   *   get:
+   *     summary: List all stations
+   *     tags: [Admin]
+   *     responses:
+   *       200:
+   *         description: List of stations
+   */
   app.get('/admin/stations', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const stations = await stationRepository.findAll();
@@ -468,6 +650,16 @@ export function createApiApp(): Application {
   });
 
   // Get system events
+  /**
+   * @swagger
+   * /admin/events:
+   *   get:
+   *     summary: Get system events
+   *     tags: [Admin]
+   *     responses:
+   *       200:
+   *         description: System events
+   */
   app.get('/admin/events', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;

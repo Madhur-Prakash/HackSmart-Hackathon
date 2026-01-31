@@ -1,4 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
 import { createProducer, TOPICS, produceMessage, disconnectKafka } from '../../kafka';
 import { setWithTTL, REDIS_KEYS } from '../../redis';
 import { config } from '../../config';
@@ -121,20 +123,67 @@ async function ingestUserContext(data: UserContext): Promise<void> {
   logMetrics(logger, 'ingestion.user.latency', duration, { userId: data.userId });
 }
 
+
 /**
- * Create Express application
+ * @swagger
+ * tags:
+ *   - name: Ingestion
+ *     description: Data ingestion endpoints
+ *   - name: Health
+ *     description: Health endpoints
  */
 function createApp(): Application {
   const app = express();
-  
   app.use(express.json({ limit: '10mb' }));
 
-  // Health check
+  // Swagger setup
+  const swaggerOptions = {
+    definition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'Ingestion Service API',
+        version: '1.0.0',
+        description: 'API documentation for the Ingestion Service',
+      },
+      servers: [
+        { url: 'http://localhost:3001', description: 'Ingestion Service' },
+      ],
+    },
+    apis: [__filename.replace(/\\/g, '/')],
+  };
+  const swaggerSpec = swaggerJSDoc(swaggerOptions);
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+  /**
+   * @swagger
+   * /health:
+   *   get:
+   *     summary: Health check
+   *     tags: [Health]
+   *     responses:
+   *       200:
+   *         description: Service health
+   */
   app.get('/health', (req: Request, res: Response) => {
     res.json({ status: 'healthy', service: 'ingestion', timestamp: new Date().toISOString() });
   });
 
-  // Ingest station telemetry
+  /**
+   * @swagger
+   * /ingest/station:
+   *   post:
+   *     summary: Ingest station telemetry
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: Telemetry ingested
+   */
   app.post('/ingest/station', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ingestStationTelemetry(req.body);
@@ -144,22 +193,33 @@ function createApp(): Application {
     }
   });
 
-  // Batch ingest station telemetry
+  /**
+   * @swagger
+   * /ingest/station/batch:
+   *   post:
+   *     summary: Batch ingest station telemetry
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: Batch ingested
+   */
   app.post('/ingest/station/batch', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { stations } = req.body as { stations: StationTelemetry[] };
-      
       if (!Array.isArray(stations)) {
         return res.status(400).json({ error: 'stations must be an array' });
       }
-
       const results = await Promise.allSettled(
         stations.map(s => ingestStationTelemetry(s))
       );
-
       const succeeded = results.filter(r => r.status === 'fulfilled').length;
       const failed = results.filter(r => r.status === 'rejected').length;
-
       res.status(202).json({ 
         success: true, 
         message: 'Batch ingested',
@@ -170,7 +230,22 @@ function createApp(): Application {
     }
   });
 
-  // Ingest station health
+  /**
+   * @swagger
+   * /ingest/health:
+   *   post:
+   *     summary: Ingest station health
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: Health data ingested
+   */
   app.post('/ingest/health', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ingestStationHealth(req.body);
@@ -180,7 +255,22 @@ function createApp(): Application {
     }
   });
 
-  // Ingest grid status
+  /**
+   * @swagger
+   * /ingest/grid:
+   *   post:
+   *     summary: Ingest grid status
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: Grid status ingested
+   */
   app.post('/ingest/grid', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ingestGridStatus(req.body);
@@ -190,7 +280,22 @@ function createApp(): Application {
     }
   });
 
-  // Ingest user context
+  /**
+   * @swagger
+   * /ingest/user-context:
+   *   post:
+   *     summary: Ingest user context
+   *     tags: [Ingestion]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       202:
+   *         description: User context ingested
+   */
   app.post('/ingest/user-context', async (req: Request, res: Response, next: NextFunction) => {
     try {
       await ingestUserContext(req.body);

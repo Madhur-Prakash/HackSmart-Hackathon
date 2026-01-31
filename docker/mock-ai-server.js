@@ -3,9 +3,62 @@
  * Simulates external AI prediction endpoints for development and testing
  */
 
+
 const express = require('express');
+const swaggerUi = require('swagger-ui-express');
 const app = express();
 const PORT = process.env.PORT || 8081;
+
+// Minimal OpenAPI spec for Mock AI
+const swaggerSpec = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Mock AI Service API',
+    version: '1.0.0',
+    description: 'API documentation for the Mock AI Service',
+  },
+  servers: [
+    { url: 'http://localhost:8081', description: 'Mock AI Service' },
+  ],
+  paths: {
+    '/ai/load-forecast': {
+      get: {
+        summary: 'Get load forecast',
+        parameters: [
+          { in: 'query', name: 'stationId', required: true, schema: { type: 'string' } }
+        ],
+        responses: { 200: { description: 'Load forecast' } }
+      }
+    },
+    '/ai/fault-probability': {
+      get: {
+        summary: 'Get fault probability',
+        parameters: [
+          { in: 'query', name: 'stationId', required: true, schema: { type: 'string' } }
+        ],
+        responses: { 200: { description: 'Fault probability' } }
+      }
+    },
+    '/ai/batch-predict': {
+      post: {
+        summary: 'Batch predict',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', properties: { stationIds: { type: 'array', items: { type: 'string' } } } } } }
+        },
+        responses: { 200: { description: 'Batch predictions' } }
+      }
+    },
+    '/health': {
+      get: {
+        summary: 'Health check',
+        responses: { 200: { description: 'Service health' } }
+      }
+    }
+  }
+};
+
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(express.json());
 

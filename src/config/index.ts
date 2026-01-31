@@ -10,11 +10,7 @@ export const config = {
   ports: {
     api: parseInt(process.env.API_PORT || '3000', 10),
     ingestion: parseInt(process.env.INGESTION_PORT || '3001', 10),
-    features: parseInt(process.env.FEATURES_PORT || '3002', 10),
-    scoring: parseInt(process.env.SCORING_PORT || '3003', 10),
-    optimization: parseInt(process.env.OPTIMIZATION_PORT || '3004', 10),
     recommendation: parseInt(process.env.RECOMMENDATION_PORT || '3005', 10),
-    llm: parseInt(process.env.LLM_PORT || '3006', 10),
   },
 
   // Kafka Configuration

@@ -1,4 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import swaggerUi from 'swagger-ui-express';
+import swaggerJSDoc from 'swagger-jsdoc';
 import { config } from '../../config';
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { generateId, nowTimestamp } from '../../utils/helpers';
@@ -109,12 +111,46 @@ async function processRecommendation(
 /**
  * Create Express application for recommendation service
  */
+/**
+ * @swagger
+ * tags:
+ *   - name: Recommendation
+ *     description: Recommendation endpoints
+ *   - name: Health
+ *     description: Health endpoints
+ */
 function createApp(): Application {
   const app = express();
-  
   app.use(express.json());
 
-  // Health check
+  // Swagger setup
+  const swaggerOptions = {
+    definition: {
+      openapi: '3.0.0',
+      info: {
+        title: 'Recommendation Service API',
+        version: '1.0.0',
+        description: 'API documentation for the Recommendation Service',
+      },
+      servers: [
+        { url: 'http://localhost:3005', description: 'Recommendation Service' },
+      ],
+    },
+    apis: [__filename.replace(/\\/g, '/')],
+  };
+  const swaggerSpec = swaggerJSDoc(swaggerOptions);
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+  /**
+   * @swagger
+   * /health:
+   *   get:
+   *     summary: Health check
+   *     tags: [Health]
+   *     responses:
+   *       200:
+   *         description: Service health
+   */
   app.get('/health', (req: Request, res: Response) => {
     res.json({ 
       status: 'healthy', 
@@ -123,7 +159,29 @@ function createApp(): Application {
     });
   });
 
-  // Get recommendations
+  /**
+   * @swagger
+   * /recommend:
+   *   get:
+   *     summary: Get recommendations
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: query
+   *         name: userId
+   *         schema:
+   *           type: string
+   *       - in: query
+   *         name: lat
+   *         schema:
+   *           type: number
+   *       - in: query
+   *         name: lon
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: Recommendation response
+   */
   app.get('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Parse query parameters
@@ -171,7 +229,22 @@ function createApp(): Application {
     }
   });
 
-  // POST endpoint for recommendations
+  /**
+   * @swagger
+   * /recommend:
+   *   post:
+   *     summary: Get recommendations (POST)
+   *     tags: [Recommendation]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Recommendation response
+   */
   app.post('/recommend', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const validation = validate(recommendationRequestSchema, req.body);
@@ -203,7 +276,22 @@ function createApp(): Application {
     }
   });
 
-  // Get cached recommendation
+  /**
+   * @swagger
+   * /recommend/{requestId}:
+   *   get:
+   *     summary: Get cached recommendation
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Cached recommendation
+   */
   app.get('/recommend/:requestId', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { requestId } = req.params;
@@ -229,7 +317,28 @@ function createApp(): Application {
     }
   });
 
-  // Record station selection
+  /**
+   * @swagger
+   * /recommend/{requestId}/select:
+   *   post:
+   *     summary: Record station selection
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Selection recorded
+   */
   app.post('/recommend/:requestId/select', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { requestId } = req.params;
@@ -256,7 +365,28 @@ function createApp(): Application {
     }
   });
 
-  // Record feedback
+  /**
+   * @swagger
+   * /recommend/{requestId}/feedback:
+   *   post:
+   *     summary: Record feedback
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Feedback recorded
+   */
   app.post('/recommend/:requestId/feedback', async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { requestId } = req.params;

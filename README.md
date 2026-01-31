@@ -194,11 +194,7 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 |---------|------|-------------|
 | **API Gateway** | `3000` | Main REST API, handles all public/admin requests |
 | **Ingestion** | `3001` | Receives IoT telemetry, validates & publishes to Kafka |
-| **Features** | `3002` | Real-time feature engineering from telemetry |
-| **Scoring** | `3003` | Multi-objective station scoring engine |
-| **Optimization** | `3004` | Constraint handling & Top-K selection |
 | **Recommendation** | `3005` | Orchestrates recommendation flow |
-| **LLM** | `3006` | Generates human-readable explanations |
 | **Mock AI** | `8081` | Local AI service for development |
 
 ### Infrastructure Services
