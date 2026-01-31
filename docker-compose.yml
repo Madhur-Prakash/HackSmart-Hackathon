@@ -148,6 +148,29 @@ services:
       - ev-network
     restart: unless-stopped
 
+# Recommendation Service
+  recommendation:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.recommendation
+    container_name: ev-recommendation
+    depends_on:
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      RECOMMENDATION_PORT: 3002
+      KAFKA_BROKERS: kafka:29092
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    networks:
+      - ev-network
+    restart: unless-stopped
+
   # Ingestion Service
   ingestion:
     build:
