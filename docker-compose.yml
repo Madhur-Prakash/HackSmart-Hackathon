@@ -146,7 +146,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
 # Recommendation Service
   recommendation:
@@ -169,7 +169,7 @@ services:
       REDIS_PORT: 6379
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
   # Ingestion Service
   ingestion:
@@ -192,7 +192,7 @@ services:
       REDIS_PORT: 6379
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
   # Feature Engineering Service
   features:
@@ -212,7 +212,7 @@ services:
       REDIS_PORT: 6379
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
   # Scoring Service
   scoring:
@@ -232,7 +232,7 @@ services:
       REDIS_PORT: 6379
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
 # Model API Service
   model-api:
@@ -246,7 +246,7 @@ services:
       MODEL_API_PORT: 8001
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
     
   # Mock AI Service (for development)
   mock-ai:
@@ -260,7 +260,7 @@ services:
       PORT: 8081
     networks:
       - ev-network
-    restart: unless-stopped
+    restart: always
 
 # ==========================================
 # Volumes
