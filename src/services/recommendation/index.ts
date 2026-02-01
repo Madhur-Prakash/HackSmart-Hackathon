@@ -1,4 +1,5 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import swaggerJSDoc from 'swagger-jsdoc';
 // ...existing code...
@@ -177,6 +178,7 @@ function createApp(): Application {
    */
   
   const app = express();
+  app.use(cors());
   app.use(express.json());
   
   app.post('/queue/join', async (req: Request, res: Response, next: NextFunction) => {
@@ -611,7 +613,7 @@ function createApp(): Application {
         description: 'API documentation for the Recommendation Service',
       },
       servers: [
-        { url: 'http://localhost:3005', description: 'Recommendation Service' },
+        { url: 'http://localhost:3002', description: 'Recommendation Service' },
       ],
     },
     apis: [__filename.replace(/\\/g, '/')],
