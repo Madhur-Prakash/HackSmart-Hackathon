@@ -1,6 +1,7 @@
 import { getDb, TABLES } from './client';
 import { createLogger } from '../utils/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { setWithTTL, addToSortedSet, REDIS_KEYS } from '../redis';
 
 const logger = createLogger('seed');
 
@@ -331,6 +332,60 @@ export async function seedDatabase(): Promise<void> {
 
     await db(TABLES.systemEvents).insert(systemEvents);
     logger.info('Inserted system events');
+
+    // Seed Redis with initial scores and features for each station
+    logger.info('Seeding Redis with initial station data...');
+    for (const station of sampleStations) {
+      const score = 0.6 + Math.random() * 0.4;
+      const features = {
+        stationId: station.id,
+        effectiveWaitTime: Math.random() * 15,
+        stationReliabilityScore: 0.85 + Math.random() * 0.15,
+        energyStabilityIndex: 0.8 + Math.random() * 0.2,
+        chargerAvailabilityRatio: 0.5 + Math.random() * 0.5,
+        distancePenalty: 0,
+        normalizedFeatures: {
+          waitTime: Math.random(),
+          availability: 0.5 + Math.random() * 0.5,
+          reliability: 0.85 + Math.random() * 0.15,
+          distance: Math.random(),
+          energyStability: 0.8 + Math.random() * 0.2,
+        },
+        timestamp: Date.now(),
+      };
+
+      const stationScore = {
+        stationId: station.id,
+        overallScore: score,
+        componentScores: {
+          waitTimeScore: 0.7 + Math.random() * 0.3,
+          availabilityScore: 0.6 + Math.random() * 0.4,
+          reliabilityScore: 0.8 + Math.random() * 0.2,
+          distanceScore: 0.5 + Math.random() * 0.5,
+          energyStabilityScore: 0.75 + Math.random() * 0.25,
+        },
+        rank: 0,
+        confidence: 0.85 + Math.random() * 0.15,
+        timestamp: Date.now(),
+      };
+
+      const health = {
+        stationId: station.id,
+        status: 'operational',
+        healthScore: 80 + Math.random() * 20,
+        lastHeartbeat: Date.now(),
+        issues: [],
+      };
+
+      // Store in Redis
+      await setWithTTL(REDIS_KEYS.stationFeatures(station.id), features, 3600);
+      await setWithTTL(REDIS_KEYS.stationScore(station.id), stationScore, 3600);
+      await setWithTTL(REDIS_KEYS.stationHealth(station.id), health, 3600);
+      await addToSortedSet(REDIS_KEYS.stationRanking, score, station.id);
+
+      logger.info(`Seeded Redis data for station: ${station.id}`);
+    }
+    logger.info('Redis seeding completed');
 
     logger.info('Database seeding completed successfully');
   } catch (error) {

@@ -1,10 +1,58 @@
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { setWithTTL, getJSON, REDIS_KEYS } from '../../redis';
-import { LoadForecast, FaultPrediction } from '../../types';
+import { LoadForecast, FaultPrediction, StationFeatures } from '../../types';
 import { config } from '../../config';
 import { runModel } from '../../utils/modelRunner';
 
 const logger = createLogger('external-ai');
+
+/**
+ * Build model input from station features or use defaults
+ */
+async function buildModelInput(stationId: string): Promise<Record<string, unknown>> {
+  // Try to get features from Redis
+  const features = await getJSON<StationFeatures>(REDIS_KEYS.stationFeatures(stationId));
+  
+  const now = new Date();
+  const hour_of_day = now.getHours();
+  const day_of_week = now.getDay();
+  
+  // Build input with available data or realistic defaults
+  return {
+    station_id: stationId,
+    stationId: stationId,
+    
+    // Time features
+    hour_of_day,
+    day_of_week,
+    timestamp: now.toISOString(),
+    
+    // Station features from Redis or defaults
+    station_reliability_score: features?.stationReliabilityScore ?? 0.85,
+    energy_stability_index: features?.energyStabilityIndex ?? 0.9,
+    
+    // Queue/wait features
+    queue_length: Math.max(1, Math.floor((features?.effectiveWaitTime ?? 15) / 3)),
+    avg_wait_time: features?.effectiveWaitTime ?? 15,
+    current_queue: Math.max(1, Math.floor((features?.effectiveWaitTime ?? 15) / 3)),
+    
+    // Battery/charger features (derived from chargerAvailabilityRatio)
+    charger_availability_ratio: features?.chargerAvailabilityRatio ?? 0.7,
+    available_batteries: Math.floor((features?.chargerAvailabilityRatio ?? 0.7) * 50),
+    total_batteries: 50,
+    available_chargers: Math.floor((features?.chargerAvailabilityRatio ?? 0.7) * 15),
+    total_chargers: 15,
+    
+    // Power features
+    power_usage_kw: 120,
+    power_capacity_kw: 200,
+    
+    // Status
+    status: 'OPERATIONAL',
+    weather_condition: 'Clear',
+    weather_temp: 25,
+  };
+}
 
 /**
  * Fetch load forecast using local model
@@ -18,7 +66,7 @@ export async function fetchLoadForecast(stationId: string): Promise<LoadForecast
     return cached;
   }
   try {
-    const inputData = { stationId };
+    const inputData = await buildModelInput(stationId);
     const result = await runModel(config.models.xgbQueue, inputData);
     await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
     logEvent(logger, 'load_forecast_model_inference', { stationId });
@@ -41,7 +89,7 @@ export async function fetchFaultProbability(stationId: string): Promise<FaultPre
     return cached;
   }
   try {
-    const inputData = { stationId };
+    const inputData = await buildModelInput(stationId);
     const result = await runModel(config.models.lgbmFault, inputData);
     await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
     logEvent(logger, 'fault_prediction_model_inference', { stationId });

@@ -164,6 +164,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      postgres:
+        condition: service_healthy
     ports:
       - "3002:3002"
     environment:
@@ -172,6 +174,11 @@ services:
       KAFKA_BROKERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: evplatform
+      POSTGRES_PASSWORD: evplatform123
+      POSTGRES_DB: evplatform
       MODEL_API_URL: http://model-api:8001
       AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
       AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability

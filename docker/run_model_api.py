@@ -26,7 +26,7 @@ def preprocess_features(data: Dict[str, Any], model_type: str = "standard") -> n
     
     Args:
         data: Input data dictionary
-        model_type: One of "standard" (22 features), "fault" (25 features), "action" (22 features)
+        model_type: One of "standard" (23 features), "fault" (25 features)
     """
     # Extract timestamp info
     timestamp_str = data.get('timestamp', datetime.now().isoformat())
@@ -40,13 +40,16 @@ def preprocess_features(data: Dict[str, Any], model_type: str = "standard") -> n
     is_weekend = timestamp.weekday() >= 5
     
     # Get values from input data with defaults (support both snake_case and camelCase)
-    current_queue = data.get('current_queue', data.get('currentQueue', 5))
+    current_queue = data.get('current_queue', data.get('currentQueue', data.get('queue_length', 5)))
     battery_level = data.get('battery_level', data.get('batteryLevel', 50))
     energy_demand = data.get('energy_demand', data.get('energyDemand', 100))
     weather_temp = data.get('weather_temp', data.get('weatherTemp', 25))
-    station_reliability = data.get('station_reliability', data.get('stationReliability', 0.9))
-    energy_stability = data.get('energy_stability', data.get('energyStability', 0.9))
+    station_reliability = data.get('station_reliability', data.get('stationReliability', 
+                                   data.get('station_reliability_score', 0.9)))
+    energy_stability = data.get('energy_stability', data.get('energyStability',
+                                data.get('energy_stability_index', 0.9)))
     station_id = data.get('station_id', data.get('stationId', 'STATION_000'))
+    avg_wait_time = data.get('avg_wait_time', data.get('avgWaitTime', current_queue * 3))
     
     # Available/total values
     available_batteries = data.get('available_batteries', data.get('availableBatteries', current_queue * 2))
@@ -56,94 +59,106 @@ def preprocess_features(data: Dict[str, Any], model_type: str = "standard") -> n
     power_usage_kw = data.get('power_usage_kw', data.get('powerUsageKw', energy_demand))
     power_capacity_kw = data.get('power_capacity_kw', data.get('powerCapacityKw', 200))
     
-    # Map API features to model features
-    feature_mapping = {
-        'hour_of_day': hour_of_day,
-        'day_of_week': day_of_week,
-        'station_reliability_score': station_reliability,
-        'energy_stability_index': energy_stability,
-        'available_batteries': available_batteries,
-        'total_batteries': total_batteries,
-        'available_chargers': available_chargers,
-        'total_chargers': total_chargers,
-        'power_usage_kw': power_usage_kw,
-        'power_capacity_kw': power_capacity_kw,
-        'is_peak_hour': 1 if hour_of_day in [8, 9, 17, 18, 19] else 0,
-        'traffic_factor': 1.2 if is_weekend else 1.0,
-        
-        # Weather condition one-hot encoding (default to Clear)
-        'weather_condition_Clear': 1,
-        'weather_condition_Fog': 0,
-        'weather_condition_Rain': 0,
-        
-        # Status one-hot encoding (default to OPERATIONAL)
-        'status_DEGRADED': 0,
-        'status_MAINTENANCE': 0,
-        'status_OPERATIONAL': 1,
-        
-        # Station ID one-hot encoding
-        'station_id_STATION_000': 0,
-        'station_id_STATION_001': 0,
-        'station_id_STATION_002': 0,
-        'station_id_STATION_003': 0,
-        'station_id_STATION_004': 0
-    }
-    
     # Handle weather condition mapping
     weather_condition = data.get('weather_condition', data.get('weatherCondition', 'Clear'))
-    feature_mapping['weather_condition_Clear'] = 0
-    feature_mapping['weather_condition_Fog'] = 0
-    feature_mapping['weather_condition_Rain'] = 0
+    weather_clear = 0
+    weather_fog = 0
+    weather_rain = 0
     
     if weather_condition == 'Fog' or weather_temp < 10:
-        feature_mapping['weather_condition_Fog'] = 1
+        weather_fog = 1
     elif weather_condition == 'Rain' or weather_temp > 35:
-        feature_mapping['weather_condition_Rain'] = 1
+        weather_rain = 1
     else:
-        feature_mapping['weather_condition_Clear'] = 1
-    
-    # Handle station ID mapping
-    station_key = f'station_id_{station_id}'
-    if station_key in feature_mapping:
-        feature_mapping[station_key] = 1
-    else:
-        feature_mapping['station_id_STATION_000'] = 1
+        weather_clear = 1
     
     # Handle status mapping
     status = data.get('status', 'OPERATIONAL').upper()
-    feature_mapping['status_DEGRADED'] = 0
-    feature_mapping['status_MAINTENANCE'] = 0
-    feature_mapping['status_OPERATIONAL'] = 0
+    status_degraded = 1 if status == 'DEGRADED' else 0
+    status_maintenance = 1 if status == 'MAINTENANCE' else 0
+    status_operational = 1 if status == 'OPERATIONAL' else 0
     
-    if status == 'DEGRADED':
-        feature_mapping['status_DEGRADED'] = 1
-    elif status == 'MAINTENANCE':
-        feature_mapping['status_MAINTENANCE'] = 1
-    else:
-        feature_mapping['status_OPERATIONAL'] = 1
+    # Station ID one-hot encoding (default to STATION_000)
+    station_ids = ['STATION_000', 'STATION_001', 'STATION_002', 'STATION_003', 'STATION_004']
+    station_one_hot = [1 if station_id == sid else 0 for sid in station_ids]
+    # If station_id not recognized, default to STATION_000
+    if sum(station_one_hot) == 0:
+        station_one_hot[0] = 1
     
-    # Create feature array in correct order (22 features for standard)
-    model_features = [
-        'available_batteries', 'total_batteries', 'available_chargers', 'total_chargers',
-        'power_usage_kw', 'power_capacity_kw', 'hour_of_day', 'day_of_week',
-        'is_peak_hour', 'traffic_factor', 'station_reliability_score', 'energy_stability_index',
-        'weather_condition_Clear', 'weather_condition_Fog', 'weather_condition_Rain',
-        'status_DEGRADED', 'status_MAINTENANCE', 'status_OPERATIONAL',
-        'station_id_STATION_000', 'station_id_STATION_001', 'station_id_STATION_002',
-        'station_id_STATION_003'
-    ]
+    is_peak_hour = 1 if hour_of_day in [8, 9, 17, 18, 19] else 0
+    traffic_factor = 1.2 if is_weekend else 1.0
     
-    # Build feature vector
-    feature_vector = [float(feature_mapping.get(f, 0)) for f in model_features]
-    
-    # For fault model, add 2 extra features (25 total) and one more station ID
     if model_type == "fault":
-        # Add station_id_STATION_004
-        feature_vector.append(float(feature_mapping.get('station_id_STATION_004', 0)))
-        # Add normalized queue factor
-        feature_vector.append(current_queue / 10.0)
-        # Add unreliability factor
-        feature_vector.append(1.0 - station_reliability)
+        # lgbm_fault_tuned_model expects 25 features in this exact order:
+        # ['queue_length', 'available_batteries', 'total_batteries', 'available_chargers', 
+        #  'total_chargers', 'avg_wait_time', 'power_usage_kw', 'power_capacity_kw', 
+        #  'hour_of_day', 'day_of_week', 'is_peak_hour', 'traffic_factor', 
+        #  'station_reliability_score', 'energy_stability_index', 
+        #  'weather_condition_Clear', 'weather_condition_Fog', 'weather_condition_Rain', 
+        #  'status_DEGRADED', 'status_MAINTENANCE', 'status_OPERATIONAL', 
+        #  'station_id_STATION_000', 'station_id_STATION_001', 'station_id_STATION_002', 
+        #  'station_id_STATION_003', 'station_id_STATION_004']
+        feature_vector = [
+            float(current_queue),           # queue_length
+            float(available_batteries),     # available_batteries
+            float(total_batteries),         # total_batteries
+            float(available_chargers),      # available_chargers
+            float(total_chargers),          # total_chargers
+            float(avg_wait_time),           # avg_wait_time
+            float(power_usage_kw),          # power_usage_kw
+            float(power_capacity_kw),       # power_capacity_kw
+            float(hour_of_day),             # hour_of_day
+            float(day_of_week),             # day_of_week
+            float(is_peak_hour),            # is_peak_hour
+            float(traffic_factor),          # traffic_factor
+            float(station_reliability),     # station_reliability_score
+            float(energy_stability),        # energy_stability_index
+            float(weather_clear),           # weather_condition_Clear
+            float(weather_fog),             # weather_condition_Fog
+            float(weather_rain),            # weather_condition_Rain
+            float(status_degraded),         # status_DEGRADED
+            float(status_maintenance),      # status_MAINTENANCE
+            float(status_operational),      # status_OPERATIONAL
+            float(station_one_hot[0]),      # station_id_STATION_000
+            float(station_one_hot[1]),      # station_id_STATION_001
+            float(station_one_hot[2]),      # station_id_STATION_002
+            float(station_one_hot[3]),      # station_id_STATION_003
+            float(station_one_hot[4]),      # station_id_STATION_004
+        ]
+    else:
+        # Standard models (xgb_queue, xgb_wait, etc.) expect 23 features:
+        # ['available_batteries', 'total_batteries', 'available_chargers', 'total_chargers',
+        #  'power_usage_kw', 'power_capacity_kw', 'hour_of_day', 'day_of_week',
+        #  'is_peak_hour', 'traffic_factor', 'station_reliability_score', 'energy_stability_index',
+        #  'weather_condition_Clear', 'weather_condition_Fog', 'weather_condition_Rain',
+        #  'status_DEGRADED', 'status_MAINTENANCE', 'status_OPERATIONAL',
+        #  'station_id_STATION_000', 'station_id_STATION_001', 'station_id_STATION_002',
+        #  'station_id_STATION_003', 'station_id_STATION_004']
+        feature_vector = [
+            float(available_batteries),     # available_batteries
+            float(total_batteries),         # total_batteries
+            float(available_chargers),      # available_chargers
+            float(total_chargers),          # total_chargers
+            float(power_usage_kw),          # power_usage_kw
+            float(power_capacity_kw),       # power_capacity_kw
+            float(hour_of_day),             # hour_of_day
+            float(day_of_week),             # day_of_week
+            float(is_peak_hour),            # is_peak_hour
+            float(traffic_factor),          # traffic_factor
+            float(station_reliability),     # station_reliability_score
+            float(energy_stability),        # energy_stability_index
+            float(weather_clear),           # weather_condition_Clear
+            float(weather_fog),             # weather_condition_Fog
+            float(weather_rain),            # weather_condition_Rain
+            float(status_degraded),         # status_DEGRADED
+            float(status_maintenance),      # status_MAINTENANCE
+            float(status_operational),      # status_OPERATIONAL
+            float(station_one_hot[0]),      # station_id_STATION_000
+            float(station_one_hot[1]),      # station_id_STATION_001
+            float(station_one_hot[2]),      # station_id_STATION_002
+            float(station_one_hot[3]),      # station_id_STATION_003
+            float(station_one_hot[4]),      # station_id_STATION_004
+        ]
     
     return np.array([feature_vector])
 
