@@ -59,6 +59,11 @@ export const config = {
     model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
   },
 
+  // Model API Configuration
+  modelApi: {
+    url: process.env.MODEL_API_URL || 'http://localhost:8001',
+  },
+
   // External AI Services
   aiServices: {
     loadForecast: process.env.AI_LOAD_FORECAST_URL || 'http://localhost:8081/ai/load-forecast',

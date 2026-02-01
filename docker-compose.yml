@@ -143,7 +143,12 @@ services:
       POSTGRES_USER: evplatform
       POSTGRES_PASSWORD: evplatform123
       POSTGRES_DB: evplatform
+      MODEL_API_URL: http://model-api:8001
+      AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
+      AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
     networks:
       - ev-network
     restart: always
@@ -167,6 +172,11 @@ services:
       KAFKA_BROKERS: kafka:29092
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      MODEL_API_URL: http://model-api:8001
+      AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
+      AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
     networks:
       - ev-network
     restart: always
@@ -244,6 +254,8 @@ services:
       - "8001:8001"
     environment:
       MODEL_API_PORT: 8001
+    volumes:
+      - ./models:/app/models:ro
     networks:
       - ev-network
     restart: always
