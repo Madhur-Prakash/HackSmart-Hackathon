@@ -9,6 +9,7 @@ info:
     - Real-time station telemetry ingestion
     - AI-powered charging station recommendations
     - Predictive load forecasting and fault detection
+    - Smart operations optimization (traffic, logistics, staff)
     - Admin dashboard with LLM-generated insights
     
     ## Microservices Architecture
@@ -20,10 +21,22 @@ info:
     | Features Service | 3002 | `http://localhost:3002` |
     | Scoring Service | 3003 | `http://localhost:3003` |
     | Optimization Service | 3004 | `http://localhost:3004` |
-    | Recommendation Service | 3005 | `http://localhost:3005` |
+    | Recommendation Service | 3002 | `http://localhost:3002` |
     | LLM Service | 3006 | `http://localhost:3006` |
+    | NavSwap AI Prediction | 8001 | `http://localhost:8001` |
     | External AI (Mock) | 8081 | `http://localhost:8081` |
     | Kafka UI | 8082 | `http://localhost:8082` |
+    
+    ## AI Models
+    
+    The platform uses multiple ML models for predictions:
+    - **XGBoost Queue Model** - Queue length prediction
+    - **XGBoost Wait Model** - Wait time prediction
+    - **LightGBM Fault Model** - Fault probability prediction
+    - **XGBoost Action Model** - System action recommendation
+    - **Traffic Forecast Model** - Traffic pattern prediction
+    - **Battery Rebalance Model** - Battery logistics optimization
+    - **Staff Diversion Model** - Staff allocation optimization
     
     ## Authentication
     Currently open for development. Production deployments should implement JWT/OAuth2.
@@ -39,7 +52,7 @@ tags:
   - name: Ingestion
     description: Data ingestion endpoints (http://localhost:3001)
   - name: Recommendations
-    description: Station recommendation endpoints (http://localhost:3000 for GET, http://localhost:3005 for selection/feedback)
+    description: Station recommendation endpoints (http://localhost:3000 for GET, http://localhost:3002 for selection/feedback)
   - name: Stations
     description: Station information endpoints (http://localhost:3000)
   - name: Admin
@@ -48,6 +61,35 @@ tags:
     description: Feature engineering service (http://localhost:3002)
   - name: Scoring
     description: Station scoring service (http://localhost:3003)
+  - name: AI
+    description: |
+      AI prediction and analytics services including:
+      - External AI Mock Service (http://localhost:8081) - Basic load/fault predictions
+      - NavSwap AI Prediction Service (http://localhost:8001) - Advanced ML predictions including:
+        - Smart station recommendations with unified AI pipeline
+        - Smart operations optimization (traffic, logistics, staff)
+        - Load/Queue predictions (XGBoost)
+        - Fault probability predictions (LightGBM)
+        - System action predictions
+        - LLM-powered explanations (Groq)
+  - name: Queue
+    description: |
+      Queue management endpoints for battery swap operations (http://localhost:3002)
+      - Join queue and get QR code
+      - Verify QR code at station
+      - Complete battery swap
+  - name: Delivery
+    description: |
+      Battery delivery management endpoints (http://localhost:3002)
+      - Alert drivers for delivery
+      - Accept/confirm deliveries
+      - Track delivery status
+  - name: Fault
+    description: |
+      Fault reporting and ticket management (http://localhost:3002)
+      - Report station faults
+      - Create manual tickets
+      - View all tickets (admin)
   - name: AI
     description: External AI prediction services (http://localhost:8081)
 
@@ -69,7 +111,7 @@ paths:
         - Ingestion: `http://localhost:3001/health`
         - Features: `http://localhost:3002/health`
         - Scoring: `http://localhost:3003/health`
-        - Recommendation: `http://localhost:3005/health`
+        - Recommendation: `http://localhost:3002/health`
         - Mock AI: `http://localhost:8081/health`
       operationId: healthCheck
       responses:
@@ -544,10 +586,10 @@ paths:
       description: |
         Retrieve a cached recommendation by request ID.
         
-        **URL:** `http://localhost:3005/recommend/{requestId}`
+        **URL:** `http://localhost:3002/recommend/{requestId}`
       operationId: getCachedRecommendation
       servers:
-        - url: http://localhost:3005
+        - url: http://localhost:3002
           description: Recommendation Service
       parameters:
         - name: requestId
@@ -577,19 +619,19 @@ paths:
       description: |
         Record when a user selects a station from recommendations.
         
-        **URL:** `http://localhost:3005/recommend/{requestId}/select`
+        **URL:** `http://localhost:3002/recommend/{requestId}/select`
         
-        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3005), not the API Gateway.
+        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3002), not the API Gateway.
         
         **Example:**
         ```bash
-        curl -X POST "http://localhost:3005/recommend/REQ_abc123/select" \
+        curl -X POST "http://localhost:3002/recommend/REQ_abc123/select" \
           -H "Content-Type: application/json" \
           -d '{"stationId": "ST_101"}'
         ```
       operationId: recordStationSelection
       servers:
-        - url: http://localhost:3005
+        - url: http://localhost:3002
           description: Recommendation Service (only)
       parameters:
         - name: requestId
@@ -632,19 +674,19 @@ paths:
       description: |
         Submit feedback on recommendation quality.
         
-        **URL:** `http://localhost:3005/recommend/{requestId}/feedback`
+        **URL:** `http://localhost:3002/recommend/{requestId}/feedback`
         
-        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3005), not the API Gateway.
+        ⚠️ This endpoint is ONLY available on the Recommendation Service (port 3002), not the API Gateway.
         
         **Example:**
         ```bash
-        curl -X POST "http://localhost:3005/recommend/REQ_abc123/feedback" \
+        curl -X POST "http://localhost:3002/recommend/REQ_abc123/feedback" \
           -H "Content-Type: application/json" \
           -d '{"rating": 5}'
         ```
       operationId: submitFeedback
       servers:
-        - url: http://localhost:3005
+        - url: http://localhost:3002
           description: Recommendation Service (only)
       parameters:
         - name: requestId
@@ -674,6 +716,524 @@ paths:
                 message: Feedback recorded
         '400':
           $ref: '#/components/responses/ValidationError'
+
+  # ============================================================================
+  # QUEUE MANAGEMENT ENDPOINTS (Port 3002)
+  # ============================================================================
+
+  /queue/join:
+    post:
+      tags:
+        - Queue
+      summary: Join station queue
+      description: |
+        User confirms arrival at station and joins the queue. A QR code is generated for verification.
+        
+        **URL:** `http://localhost:3002/queue/join`
+        
+        **Flow:**
+        1. User arrives at station
+        2. Calls this endpoint with stationId and userId
+        3. Receives a unique QR code
+        4. Shows QR code at station for verification
+      operationId: joinQueue
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QueueJoinRequest'
+            example:
+              stationId: ST_101
+              userId: USR_001
+      responses:
+        '200':
+          description: Successfully joined queue, QR code generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueJoinResponse'
+              example:
+                success: true
+                qrCode: QR_abc123xyz
+                qrImagePath: /qrcodes/QR_abc123xyz.png
+                entry:
+                  id: QUEUE_001
+                  stationId: ST_101
+                  userId: USR_001
+                  qrCode: QR_abc123xyz
+                  status: waiting
+                  joinedAt: "2026-02-01T10:00:00Z"
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /queue/verify:
+    post:
+      tags:
+        - Queue
+      summary: Verify QR code at station
+      description: |
+        Station staff scans and verifies QR code, updating the live queue status.
+        
+        **URL:** `http://localhost:3002/queue/verify`
+        
+        **Flow:**
+        1. Station staff scans user's QR code
+        2. System verifies the QR code
+        3. User status updated to 'verified'
+        4. QR code image is deleted after verification
+        5. Returns live queue status for the station
+      operationId: verifyQueue
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRCodeRequest'
+            example:
+              qrCode: QR_abc123xyz
+      responses:
+        '200':
+          description: QR code verified, queue updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueVerifyResponse'
+              example:
+                success: true
+                entry:
+                  id: QUEUE_001
+                  stationId: ST_101
+                  userId: USR_001
+                  qrCode: QR_abc123xyz
+                  status: verified
+                  joinedAt: "2026-02-01T10:00:00Z"
+                busyCount: 3
+                queue:
+                  - id: QUEUE_001
+                    status: verified
+                  - id: QUEUE_002
+                    status: waiting
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          description: QR code not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+              example:
+                success: false
+                error: QR code not found
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /queue/swap:
+    post:
+      tags:
+        - Queue
+      summary: Complete battery swap
+      description: |
+        Mark battery swap as completed and dequeue the user.
+        
+        **URL:** `http://localhost:3002/queue/swap`
+        
+        **Flow:**
+        1. Battery swap is completed at station
+        2. Staff scans QR code or enters it manually
+        3. User status updated to 'swapped'
+        4. User is removed from active queue
+        5. Returns updated live queue status
+      operationId: completeSwap
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRCodeRequest'
+            example:
+              qrCode: QR_abc123xyz
+      responses:
+        '200':
+          description: Swap completed, user dequeued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QueueSwapResponse'
+              example:
+                success: true
+                entry:
+                  id: QUEUE_001
+                  stationId: ST_101
+                  userId: USR_001
+                  qrCode: QR_abc123xyz
+                  status: swapped
+                  joinedAt: "2026-02-01T10:00:00Z"
+                busyCount: 2
+                queue: []
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # DELIVERY MANAGEMENT ENDPOINTS (Port 3002)
+  # ============================================================================
+
+  /delivery/alert:
+    post:
+      tags:
+        - Delivery
+      summary: Alert drivers for battery delivery
+      description: |
+        Create a delivery request and notify all available drivers.
+        
+        **URL:** `http://localhost:3002/delivery/alert`
+        
+        Used when a station needs battery resupply from a shop.
+      operationId: alertDelivery
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryAlertRequest'
+            example:
+              batteryId: BAT_001
+              fromShopId: SHOP_101
+              toStationId: ST_101
+      responses:
+        '200':
+          description: Delivery alert sent to drivers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryAlertResponse'
+              example:
+                success: true
+                delivery:
+                  id: DELIV_001
+                  batteryId: BAT_001
+                  fromShopId: SHOP_101
+                  toStationId: ST_101
+                  status: pending
+                  requestedAt: "2026-02-01T10:00:00Z"
+                message: Delivery alert sent to drivers.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /delivery/accept:
+    post:
+      tags:
+        - Delivery
+      summary: Driver accepts delivery
+      description: |
+        Driver accepts a pending delivery request.
+        
+        **URL:** `http://localhost:3002/delivery/accept`
+      operationId: acceptDelivery
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryAcceptRequest'
+            example:
+              deliveryId: DELIV_001
+              driverId: DRIVER_001
+      responses:
+        '200':
+          description: Delivery accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryAcceptResponse'
+              example:
+                success: true
+                delivery:
+                  id: DELIV_001
+                  batteryId: BAT_001
+                  fromShopId: SHOP_101
+                  toStationId: ST_101
+                  status: accepted
+                  assignedDriverId: DRIVER_001
+                  acceptedAt: "2026-02-01T10:05:00Z"
+                message: Delivery accepted and admin notified.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /delivery/confirm:
+    post:
+      tags:
+        - Delivery
+      summary: Confirm delivery completion
+      description: |
+        Admin confirms that a delivery has been completed.
+        
+        **URL:** `http://localhost:3002/delivery/confirm`
+      operationId: confirmDelivery
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - deliveryId
+              properties:
+                deliveryId:
+                  type: string
+                  description: Delivery ID to confirm
+            example:
+              deliveryId: DELIV_001
+      responses:
+        '200':
+          description: Delivery confirmed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryConfirmResponse'
+              example:
+                success: true
+                delivery:
+                  id: DELIV_001
+                  status: delivered
+                  deliveredAt: "2026-02-01T10:30:00Z"
+                message: Delivery confirmed and driver notified.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/deliveries:
+    get:
+      tags:
+        - Delivery
+      summary: Get all deliveries (admin)
+      description: |
+        Get list of all deliveries for admin dashboard.
+        
+        **URL:** `http://localhost:3002/admin/deliveries`
+      operationId: listDeliveries
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      responses:
+        '200':
+          description: List of deliveries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveriesListResponse'
+              example:
+                success: true
+                deliveries:
+                  - id: DELIV_001
+                    batteryId: BAT_001
+                    fromShopId: SHOP_101
+                    toStationId: ST_101
+                    status: delivered
+                    requestedAt: "2026-02-01T10:00:00Z"
+                    deliveredAt: "2026-02-01T10:30:00Z"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /driver/{driverId}/deliveries:
+    get:
+      tags:
+        - Delivery
+      summary: Get driver's deliveries
+      description: |
+        Get all deliveries assigned to a specific driver.
+        
+        **URL:** `http://localhost:3002/driver/{driverId}/deliveries`
+      operationId: getDriverDeliveries
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      parameters:
+        - name: driverId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Driver ID
+          example: DRIVER_001
+      responses:
+        '200':
+          description: Driver's deliveries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveriesListResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # FAULT MANAGEMENT ENDPOINTS (Port 3002)
+  # ============================================================================
+
+  /fault/report:
+    post:
+      tags:
+        - Fault
+      summary: Report a station fault
+      description: |
+        Report a fault at a station. Critical faults automatically create a ticket and notify admin.
+        
+        **URL:** `http://localhost:3002/fault/report`
+        
+        **Fault Levels:**
+        - `low` - Minor issue, logged only
+        - `medium` - Moderate issue, logged only
+        - `high` - Significant issue, logged only
+        - `critical` - Creates ticket and notifies admin
+      operationId: reportFault
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaultReportRequest'
+            example:
+              stationId: ST_101
+              reportedBy: USR_001
+              faultLevel: critical
+              description: Charger unit 3 not responding, sparking observed
+      responses:
+        '200':
+          description: Fault reported
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaultReportResponse'
+              example:
+                success: true
+                ticketCreated: true
+                ticket:
+                  id: TICKET_001
+                  stationId: ST_101
+                  reportedBy: USR_001
+                  faultLevel: critical
+                  description: Charger unit 3 not responding, sparking observed
+                  status: open
+                  createdAt: "2026-02-01T10:00:00Z"
+                message: Critical fault, ticket raised and admin notified.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /ticket/manual:
+    post:
+      tags:
+        - Fault
+      summary: Manually create fault ticket
+      description: |
+        Manually create a fault ticket for any issue level.
+        
+        **URL:** `http://localhost:3002/ticket/manual`
+      operationId: createManualTicket
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FaultReportRequest'
+            example:
+              stationId: ST_101
+              reportedBy: ADMIN
+              faultLevel: medium
+              description: Routine maintenance required on charger unit 2
+      responses:
+        '200':
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManualTicketResponse'
+              example:
+                success: true
+                ticket:
+                  id: TICKET_002
+                  stationId: ST_101
+                  reportedBy: ADMIN
+                  faultLevel: medium
+                  description: Routine maintenance required on charger unit 2
+                  status: open
+                  createdAt: "2026-02-01T10:00:00Z"
+                message: Ticket raised and admin notified.
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/tickets:
+    get:
+      tags:
+        - Fault
+      summary: Get all fault tickets (admin)
+      description: |
+        Get all fault tickets for admin dashboard.
+        
+        **URL:** `http://localhost:3002/admin/tickets`
+      operationId: listTickets
+      servers:
+        - url: http://localhost:3002
+          description: Recommendation Service
+      responses:
+        '200':
+          description: List of fault tickets
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketsListResponse'
+              example:
+                success: true
+                tickets:
+                  - id: TICKET_001
+                    stationId: ST_101
+                    reportedBy: USR_001
+                    faultLevel: critical
+                    description: Charger unit 3 not responding
+                    status: open
+                    createdAt: "2026-02-01T10:00:00Z"
         '404':
           $ref: '#/components/responses/NotFoundError'
         '500':
@@ -1042,6 +1602,249 @@ paths:
                           $ref: '#/components/schemas/LoadForecast'
                         faultPrediction:
                           $ref: '#/components/schemas/FaultPrediction'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ============================================================================
+  # NAVSWAP AI PREDICTION SERVICE ENDPOINTS (Port 8001)
+  # ============================================================================
+
+  /api/v1/smart-recommend:
+    post:
+      tags:
+        - AI
+      summary: Smart station recommendation
+      description: |
+        Unified AI pipeline for intelligent station recommendation.
+        Uses all 4 prediction models (load, fault, action, LLM) to provide 
+        the best station recommendation with AI-generated explanations.
+        
+        **URL:** `http://localhost:8001/api/v1/smart-recommend`
+      operationId: smartRecommend
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmartRecommendationRequest'
+            example:
+              user_context:
+                battery_level: 25
+                urgency: medium
+                distance: nearby
+                max_wait_time: 30
+              stations_data:
+                - station_id: ST_101
+                  station_name: Downtown Station
+                  latitude: 37.7749
+                  longitude: -122.4194
+                  current_queue: 5
+                  battery_level: 80
+                  energy_demand: 150
+                  weather_temp: 22
+                  is_weekend: false
+                  hour_of_day: 14
+                  station_reliability: 0.92
+                  energy_stability: 0.88
+                  base_score: 0.85
+      responses:
+        '200':
+          description: Smart recommendation with AI predictions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmartRecommendationResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/smart-operations:
+    post:
+      tags:
+        - AI
+      summary: Smart operations optimization
+      description: |
+        Comprehensive operations optimization using all AI models.
+        Includes traffic prediction, battery transport planning, 
+        staff diversion, inventory ordering, and partner storage.
+        
+        **URL:** `http://localhost:8001/api/v1/smart-operations`
+      operationId: smartOperations
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationsRequest'
+            example:
+              station_metrics:
+                station_id: ST_101
+                current_queue: 6
+                battery_level: 45
+                energy_demand: 180
+                weather_temp: 28
+                hour_of_day: 17
+                station_reliability: 0.85
+                energy_stability: 0.78
+              traffic_metrics:
+                current_traffic: 0.7
+                expected_surge: true
+              staff_availability:
+                available_staff: 3
+                on_duty: 2
+              inventory_levels:
+                batteries_available: 25
+                chargers_operational: 8
+              customer_context:
+                battery_level: 20
+                urgency: high
+      responses:
+        '200':
+          description: Operations optimization plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OperationsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/predict-load:
+    post:
+      tags:
+        - AI
+      summary: Predict queue load
+      description: |
+        Predict queue length and wait time for a station.
+        
+        **URL:** `http://localhost:8001/api/v1/predict-load`
+      operationId: predictLoad
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+      responses:
+        '200':
+          description: Load prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoadPredictionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/predict-fault:
+    post:
+      tags:
+        - AI
+      summary: Predict fault probability
+      description: |
+        Predict fault risk and probability for a station.
+        
+        **URL:** `http://localhost:8001/api/v1/predict-fault`
+      operationId: predictFault
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+      responses:
+        '200':
+          description: Fault prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaultPredictionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/predict-action:
+    post:
+      tags:
+        - AI
+      summary: Predict system action
+      description: |
+        Predict recommended system action (NORMAL, REDIRECT, MAINTENANCE_ALERT).
+        
+        **URL:** `http://localhost:8001/api/v1/predict-action`
+      operationId: predictAction
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+      responses:
+        '200':
+          description: Action prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionPredictionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/explain-decision:
+    post:
+      tags:
+        - AI
+      summary: Explain AI decision
+      description: |
+        Get LLM-generated explanation for AI decisions.
+        
+        **URL:** `http://localhost:8001/api/v1/explain-decision`
+      operationId: explainDecision
+      servers:
+        - url: http://localhost:8001
+          description: NavSwap AI Prediction Service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExplanationRequest'
+            example:
+              action: REDIRECT
+              queue_prediction: 8.5
+              wait_time: 25.0
+              fault_probability: 0.15
+              station_reliability: 0.82
+              energy_stability: 0.75
+      responses:
+        '200':
+          description: AI explanation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExplanationResponse'
         '400':
           $ref: '#/components/responses/ValidationError'
         '500':
@@ -1836,6 +2639,720 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SystemEvent'
+        count:
+          type: integer
+
+    # NavSwap AI Prediction Schemas
+    PredictionRequest:
+      type: object
+      required:
+        - timestamp
+        - station_id
+        - current_queue
+        - battery_level
+        - energy_demand
+        - weather_temp
+        - is_weekend
+        - hour_of_day
+        - station_reliability
+        - energy_stability
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+          description: Request timestamp
+        station_id:
+          type: string
+          description: Station identifier
+        current_queue:
+          type: integer
+          minimum: 0
+          description: Current queue length
+        battery_level:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Battery level percentage
+        energy_demand:
+          type: number
+          minimum: 0
+          description: Energy demand in kW
+        weather_temp:
+          type: number
+          description: Weather temperature in Celsius
+        is_weekend:
+          type: boolean
+          description: Whether it's a weekend
+        hour_of_day:
+          type: integer
+          minimum: 0
+          maximum: 23
+          description: Hour of the day (0-23)
+        station_reliability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Station reliability score (0-1)
+        energy_stability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Energy stability index (0-1)
+
+    LoadPredictionResponse:
+      type: object
+      required:
+        - predicted_queue_length
+        - predicted_wait_time
+      properties:
+        predicted_queue_length:
+          type: number
+          description: Predicted queue length
+        predicted_wait_time:
+          type: number
+          description: Predicted wait time in minutes
+
+    FaultPredictionResponse:
+      type: object
+      required:
+        - fault_risk
+        - fault_probability
+      properties:
+        fault_risk:
+          type: string
+          enum: [LOW, MEDIUM, HIGH]
+          description: Fault risk level
+        fault_probability:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: Fault probability (0-1)
+
+    ActionPredictionResponse:
+      type: object
+      required:
+        - system_action
+        - action_probabilities
+      properties:
+        system_action:
+          type: string
+          enum: [NORMAL, REDIRECT, MAINTENANCE_ALERT]
+          description: Recommended system action
+        action_probabilities:
+          type: object
+          additionalProperties:
+            type: number
+          description: Probability distribution over actions
+
+    ExplanationRequest:
+      type: object
+      required:
+        - action
+        - queue_prediction
+        - wait_time
+        - fault_probability
+        - station_reliability
+        - energy_stability
+      properties:
+        action:
+          type: string
+          description: System action to explain
+        queue_prediction:
+          type: number
+          description: Predicted queue length
+        wait_time:
+          type: number
+          description: Predicted wait time
+        fault_probability:
+          type: number
+          description: Fault probability
+        station_reliability:
+          type: number
+          description: Station reliability score
+        energy_stability:
+          type: number
+          description: Energy stability index
+
+    ExplanationResponse:
+      type: object
+      required:
+        - explanation
+      properties:
+        explanation:
+          type: string
+          description: LLM-generated explanation
+
+    UserContextAI:
+      type: object
+      properties:
+        battery_level:
+          type: integer
+          description: User's vehicle battery level
+        urgency:
+          type: string
+          enum: [low, medium, high]
+          default: medium
+        distance:
+          type: string
+          enum: [nearby, moderate, far]
+          default: nearby
+        max_wait_time:
+          type: integer
+          description: Maximum wait time in minutes
+
+    StationDataAI:
+      type: object
+      required:
+        - station_id
+        - station_name
+        - latitude
+        - longitude
+        - current_queue
+        - battery_level
+        - energy_demand
+        - weather_temp
+        - is_weekend
+        - hour_of_day
+        - station_reliability
+        - energy_stability
+      properties:
+        station_id:
+          type: string
+        station_name:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        current_queue:
+          type: integer
+        battery_level:
+          type: number
+        energy_demand:
+          type: number
+        weather_temp:
+          type: number
+        is_weekend:
+          type: boolean
+        hour_of_day:
+          type: integer
+        station_reliability:
+          type: number
+        energy_stability:
+          type: number
+        base_score:
+          type: number
+          default: 0.8
+
+    SmartRecommendationRequest:
+      type: object
+      required:
+        - user_context
+        - stations_data
+      properties:
+        user_context:
+          $ref: '#/components/schemas/UserContextAI'
+        stations_data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StationDataAI'
+
+    SmartRecommendationResponse:
+      type: object
+      required:
+        - recommended_station
+        - alternatives
+        - ai_predictions
+        - explanation
+        - confidence
+      properties:
+        recommended_station:
+          type: object
+          additionalProperties: true
+          description: Top recommended station with all predictions
+        alternatives:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+          description: Alternative station recommendations
+        ai_predictions:
+          type: object
+          properties:
+            predicted_queue:
+              type: number
+            predicted_wait:
+              type: number
+            fault_probability:
+              type: number
+            system_action:
+              type: string
+        explanation:
+          type: string
+          description: LLM-generated recommendation explanation
+        confidence:
+          type: number
+          description: Recommendation confidence score
+
+    OperationsRequest:
+      type: object
+      required:
+        - station_metrics
+        - traffic_metrics
+        - staff_availability
+        - inventory_levels
+        - customer_context
+      properties:
+        station_metrics:
+          type: object
+          additionalProperties: true
+          description: Current station metrics
+        traffic_metrics:
+          type: object
+          additionalProperties: true
+          description: Traffic metrics
+        staff_availability:
+          type: object
+          additionalProperties: true
+          description: Staff availability info
+        inventory_levels:
+          type: object
+          additionalProperties: true
+          description: Inventory levels
+        customer_context:
+          type: object
+          additionalProperties: true
+          description: Customer context
+
+    OperationsResponse:
+      type: object
+      required:
+        - station_recommendation
+        - traffic_prediction
+        - battery_transport_plan
+        - staff_diversion_plan
+        - inventory_order_plan
+        - partner_storage_plan
+        - ai_explanation
+        - confidence_score
+      properties:
+        station_recommendation:
+          type: object
+          additionalProperties: true
+          description: Station recommendation details
+        traffic_prediction:
+          type: object
+          properties:
+            micro_traffic_score:
+              type: number
+            congestion_level:
+              type: string
+            traffic_forecast:
+              type: number
+            peak_hours:
+              type: array
+              items:
+                type: integer
+        battery_transport_plan:
+          type: object
+          properties:
+            rebalance_needed:
+              type: boolean
+            batteries_to_move:
+              type: integer
+            priority:
+              type: string
+            estimated_time:
+              type: integer
+        staff_diversion_plan:
+          type: object
+          properties:
+            diversion_needed:
+              type: boolean
+            staff_count:
+              type: integer
+            source_stations:
+              type: array
+              items:
+                type: string
+            target_station:
+              type: string
+            priority:
+              type: string
+        inventory_order_plan:
+          type: object
+          properties:
+            order_needed:
+              type: boolean
+            battery_quantity:
+              type: integer
+            urgency:
+              type: string
+            delivery_window:
+              type: string
+        partner_storage_plan:
+          type: object
+          properties:
+            storage_needed:
+              type: boolean
+            units_to_store:
+              type: integer
+            partner_locations:
+              type: array
+              items:
+                type: string
+        ai_explanation:
+          type: string
+          description: Comprehensive AI explanation of all plans
+        confidence_score:
+          type: number
+          description: Overall confidence score
+
+    # Queue Management Schemas
+    QueueJoinRequest:
+      type: object
+      required:
+        - stationId
+        - userId
+      properties:
+        stationId:
+          type: string
+          description: Station to join queue at
+        userId:
+          type: string
+          description: User joining the queue
+
+    QueueEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Queue entry ID
+        stationId:
+          type: string
+          description: Station ID
+        userId:
+          type: string
+          description: User ID
+        qrCode:
+          type: string
+          description: Unique QR code for this entry
+        status:
+          type: string
+          enum: [waiting, swapping, completed, cancelled]
+          description: Current queue status
+        joinedAt:
+          type: string
+          format: date-time
+          description: Time when user joined queue
+        swapStartedAt:
+          type: string
+          format: date-time
+          description: Time when swap started (if applicable)
+        completedAt:
+          type: string
+          format: date-time
+          description: Time when swap completed (if applicable)
+
+    QueueJoinResponse:
+      type: object
+      required:
+        - success
+        - qrCode
+        - entry
+      properties:
+        success:
+          type: boolean
+        qrCode:
+          type: string
+          description: Generated QR code string
+        qrImagePath:
+          type: string
+          description: Path to generated QR code image
+        entry:
+          $ref: '#/components/schemas/QueueEntry'
+
+    QRCodeRequest:
+      type: object
+      required:
+        - qrCode
+      properties:
+        qrCode:
+          type: string
+          description: QR code to verify or process
+
+    QueueVerifyResponse:
+      type: object
+      required:
+        - success
+        - entry
+      properties:
+        success:
+          type: boolean
+        entry:
+          $ref: '#/components/schemas/QueueEntry'
+        busyCount:
+          type: integer
+          description: Number of users currently being served
+        queue:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueEntry'
+          description: Current queue at the station
+
+    QueueSwapResponse:
+      type: object
+      required:
+        - success
+        - entry
+      properties:
+        success:
+          type: boolean
+        entry:
+          $ref: '#/components/schemas/QueueEntry'
+        busyCount:
+          type: integer
+          description: Number of users currently being served
+        queue:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueEntry'
+          description: Updated queue at the station
+
+    # Delivery Management Schemas
+    DeliveryAlertRequest:
+      type: object
+      required:
+        - batteryId
+        - fromShopId
+        - toStationId
+      properties:
+        batteryId:
+          type: string
+          description: ID of battery to deliver
+        fromShopId:
+          type: string
+          description: Source shop/warehouse ID
+        toStationId:
+          type: string
+          description: Destination station ID
+
+    Delivery:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Delivery ID
+        batteryId:
+          type: string
+          description: Battery ID being delivered
+        fromShopId:
+          type: string
+          description: Source location ID
+        toStationId:
+          type: string
+          description: Destination station ID
+        driverId:
+          type: string
+          description: Assigned driver ID
+        status:
+          type: string
+          enum: [pending, assigned, in_transit, delivered, cancelled]
+          description: Current delivery status
+        createdAt:
+          type: string
+          format: date-time
+        assignedAt:
+          type: string
+          format: date-time
+        deliveredAt:
+          type: string
+          format: date-time
+
+    DeliveryAlertResponse:
+      type: object
+      required:
+        - success
+        - delivery
+      properties:
+        success:
+          type: boolean
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+        message:
+          type: string
+
+    DeliveryAcceptRequest:
+      type: object
+      required:
+        - deliveryId
+        - driverId
+      properties:
+        deliveryId:
+          type: integer
+          description: Delivery ID to accept
+        driverId:
+          type: string
+          description: Driver accepting the delivery
+
+    DeliveryAcceptResponse:
+      type: object
+      required:
+        - success
+        - delivery
+      properties:
+        success:
+          type: boolean
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+
+    DeliveryConfirmRequest:
+      type: object
+      required:
+        - deliveryId
+      properties:
+        deliveryId:
+          type: integer
+          description: Delivery ID to confirm
+
+    DeliveryConfirmResponse:
+      type: object
+      required:
+        - success
+        - delivery
+      properties:
+        success:
+          type: boolean
+        delivery:
+          $ref: '#/components/schemas/Delivery'
+
+    DeliveriesListResponse:
+      type: object
+      required:
+        - success
+        - deliveries
+      properties:
+        success:
+          type: boolean
+        deliveries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Delivery'
+        count:
+          type: integer
+
+    # Fault/Ticket Management Schemas
+    FaultReportRequest:
+      type: object
+      required:
+        - stationId
+        - reportedBy
+        - description
+      properties:
+        stationId:
+          type: string
+          description: Station with the fault
+        reportedBy:
+          type: string
+          description: User reporting the fault
+        faultLevel:
+          type: string
+          enum: [low, medium, high, critical]
+          default: medium
+          description: Severity level of the fault
+        description:
+          type: string
+          description: Description of the fault
+
+    FaultTicket:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Ticket ID
+        stationId:
+          type: string
+          description: Station ID
+        reportedBy:
+          type: string
+          description: Reporter user ID
+        faultLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+          description: Ticket status
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+
+    FaultReportResponse:
+      type: object
+      required:
+        - success
+        - ticket
+      properties:
+        success:
+          type: boolean
+        ticket:
+          $ref: '#/components/schemas/FaultTicket'
+        message:
+          type: string
+
+    ManualTicketRequest:
+      type: object
+      required:
+        - stationId
+        - createdBy
+        - faultLevel
+        - description
+      properties:
+        stationId:
+          type: string
+        createdBy:
+          type: string
+          description: Admin/staff creating the ticket
+        faultLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        description:
+          type: string
+        notes:
+          type: string
+          description: Additional admin notes
+
+    ManualTicketResponse:
+      type: object
+      required:
+        - success
+        - ticket
+      properties:
+        success:
+          type: boolean
+        ticket:
+          $ref: '#/components/schemas/FaultTicket'
+
+    TicketsListResponse:
+      type: object
+      required:
+        - success
+        - tickets
+      properties:
+        success:
+          type: boolean
+        tickets:
+          type: array
+          items:
+            $ref: '#/components/schemas/FaultTicket'
         count:
           type: integer
 

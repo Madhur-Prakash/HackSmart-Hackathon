@@ -68,9 +68,24 @@ export async function fetchLoadForecast(stationId: string): Promise<LoadForecast
   try {
     const inputData = await buildModelInput(stationId);
     const result = await runModel(config.models.xgbQueue, inputData);
-    await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
-    logEvent(logger, 'load_forecast_model_inference', { stationId });
-    return result;
+    
+    // Transform model output to LoadForecast format
+    const prediction = result.prediction ?? result.predicted_queue ?? 5;
+    const hour = new Date().getHours();
+    const isPeakHour = hour >= 7 && hour <= 9 || hour >= 17 && hour <= 19;
+    
+    const loadForecast: LoadForecast = {
+      stationId,
+      predictedLoad: Math.min(1, Math.max(0, prediction / 15)), // Normalize to 0-1
+      confidence: result.confidence ?? 0.85,
+      peakTimeStart: isPeakHour ? `${hour}:00` : '17:00',
+      peakTimeEnd: isPeakHour ? `${hour + 2}:00` : '19:00',
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+    
+    await setWithTTL(cacheKey, loadForecast, config.redis.ttl.prediction);
+    logEvent(logger, 'load_forecast_model_inference', { stationId, prediction });
+    return loadForecast;
   } catch (error) {
     logger.error('Failed to run queue model', { stationId, error });
     return null;
@@ -91,9 +106,33 @@ export async function fetchFaultProbability(stationId: string): Promise<FaultPre
   try {
     const inputData = await buildModelInput(stationId);
     const result = await runModel(config.models.lgbmFault, inputData);
-    await setWithTTL(cacheKey, result, config.redis.ttl.prediction);
-    logEvent(logger, 'fault_prediction_model_inference', { stationId });
-    return result;
+    
+    // Transform model output to FaultPrediction format
+    // The model returns prediction (class) and probabilities [P(no fault), P(fault)]
+    const faultProbability = result.probabilities 
+      ? result.probabilities[1] ?? 0.1 
+      : (result.prediction ?? 0.1);
+    
+    let riskLevel: 'low' | 'medium' | 'high';
+    if (faultProbability < 0.3) {
+      riskLevel = 'low';
+    } else if (faultProbability < 0.7) {
+      riskLevel = 'medium';
+    } else {
+      riskLevel = 'high';
+    }
+    
+    const faultPrediction: FaultPrediction = {
+      stationId,
+      faultProbability,
+      riskLevel,
+      confidence: result.confidence ?? 0.8,
+      timestamp: Math.floor(Date.now() / 1000),
+    };
+    
+    await setWithTTL(cacheKey, faultPrediction, config.redis.ttl.prediction);
+    logEvent(logger, 'fault_prediction_model_inference', { stationId, faultProbability, riskLevel });
+    return faultPrediction;
   } catch (error) {
     logger.error('Failed to run fault model', { stationId, error });
     return null;
