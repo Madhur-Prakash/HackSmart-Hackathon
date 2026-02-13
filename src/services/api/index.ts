@@ -34,6 +34,10 @@ import {
 } from '../../redis';
 import { createProducer, produceMessage, TOPICS } from '../../kafka';
 import { StationTelemetry, StationHealth, UserContext, AdminSummary, SystemMetrics } from '../../types';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 
 const logger = createLogger('api-gateway');
@@ -83,9 +87,10 @@ export function createApiApp(): Application {
   // Security middleware
   app.use(helmet());
   app.use(cors({
-    origin: config.env === 'production' ? ['https://your-domain.com'] : '*',
+    origin: process.env.FRONTEND_URL,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true
   }));
 
   // Compression

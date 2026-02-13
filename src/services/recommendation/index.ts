@@ -23,6 +23,10 @@ import {
 } from '../../types';
 import { generateAndSaveQR, deleteQR, getQRRelativePath } from './qrUtil';
 import { qrQueueRepository, notificationRepository, deliveryRepository, driverRepository, faultTicketRepository } from '../../db/repositories';
+import dotenv from 'dotenv';
+import path from 'path';
+
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const logger = createLogger('recommendation-service');
 
@@ -178,7 +182,12 @@ function createApp(): Application {
    */
   
   const app = express();
-  app.use(cors());
+  app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }));
   app.use(express.json());
   
   app.post('/queue/join', async (req: Request, res: Response, next: NextFunction) => {
