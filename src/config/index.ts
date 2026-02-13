@@ -61,7 +61,7 @@ export const config = {
 
   // Model API Configuration
   modelApi: {
-    url: process.env.MODEL_API_URL || 'http://localhost:8001',
+    url: process.env.MODEL_API_URL || 'http://localhost:8005',
   },
 
   // External AI Services

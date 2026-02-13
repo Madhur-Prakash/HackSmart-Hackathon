@@ -143,7 +143,7 @@ services:
       POSTGRES_USER: evplatform
       POSTGRES_PASSWORD: evplatform123
       POSTGRES_DB: evplatform
-      MODEL_API_URL: http://model-api:8001
+      MODEL_API_URL: http://model-api:8005
       AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
       AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -179,7 +179,7 @@ services:
       POSTGRES_USER: evplatform
       POSTGRES_PASSWORD: evplatform123
       POSTGRES_DB: evplatform
-      MODEL_API_URL: http://model-api:8001
+      MODEL_API_URL: http://model-api:8005
       AI_LOAD_FORECAST_URL: http://mock-ai:8081/ai/load-forecast
       AI_FAULT_PROBABILITY_URL: http://mock-ai:8081/ai/fault-probability
       GROQ_API_KEY: ${GROQ_API_KEY:-}
@@ -258,9 +258,9 @@ services:
       dockerfile: docker/Dockerfile.modelapi
     container_name: ev-model-api
     ports:
-      - "8001:8001"
+      - "8005:8005"
     environment:
-      MODEL_API_PORT: 8001
+      MODEL_API_PORT: 8005
     volumes:
       - ./models:/app/models:ro
     networks:

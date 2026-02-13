@@ -23,7 +23,7 @@ info:
     | Optimization Service | 3004 | `http://localhost:3004` |
     | Recommendation Service | 3002 | `http://localhost:3002` |
     | LLM Service | 3006 | `http://localhost:3006` |
-    | NavSwap AI Prediction | 8001 | `http://localhost:8001` |
+    | NavSwap AI Prediction | 8005 | `http://localhost:8005` |
     | External AI (Mock) | 8081 | `http://localhost:8081` |
     | Kafka UI | 8082 | `http://localhost:8082` |
     
@@ -65,7 +65,7 @@ tags:
     description: |
       AI prediction and analytics services including:
       - External AI Mock Service (http://localhost:8081) - Basic load/fault predictions
-      - NavSwap AI Prediction Service (http://localhost:8001) - Advanced ML predictions including:
+      - NavSwap AI Prediction Service (http://localhost:8005) - Advanced ML predictions including:
         - Smart station recommendations with unified AI pipeline
         - Smart operations optimization (traffic, logistics, staff)
         - Load/Queue predictions (XGBoost)
@@ -1608,7 +1608,7 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   # ============================================================================
-  # NAVSWAP AI PREDICTION SERVICE ENDPOINTS (Port 8001)
+  # NAVSWAP AI PREDICTION SERVICE ENDPOINTS (Port 8005)
   # ============================================================================
 
   /api/v1/smart-recommend:
@@ -1621,10 +1621,10 @@ paths:
         Uses all 4 prediction models (load, fault, action, LLM) to provide 
         the best station recommendation with AI-generated explanations.
         
-        **URL:** `http://localhost:8001/api/v1/smart-recommend`
+        **URL:** `http://localhost:8005/api/v1/smart-recommend`
       operationId: smartRecommend
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true
@@ -1674,10 +1674,10 @@ paths:
         Includes traffic prediction, battery transport planning, 
         staff diversion, inventory ordering, and partner storage.
         
-        **URL:** `http://localhost:8001/api/v1/smart-operations`
+        **URL:** `http://localhost:8005/api/v1/smart-operations`
       operationId: smartOperations
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true
@@ -1727,10 +1727,10 @@ paths:
       description: |
         Predict queue length and wait time for a station.
         
-        **URL:** `http://localhost:8001/api/v1/predict-load`
+        **URL:** `http://localhost:8005/api/v1/predict-load`
       operationId: predictLoad
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true
@@ -1758,10 +1758,10 @@ paths:
       description: |
         Predict fault risk and probability for a station.
         
-        **URL:** `http://localhost:8001/api/v1/predict-fault`
+        **URL:** `http://localhost:8005/api/v1/predict-fault`
       operationId: predictFault
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true
@@ -1789,10 +1789,10 @@ paths:
       description: |
         Predict recommended system action (NORMAL, REDIRECT, MAINTENANCE_ALERT).
         
-        **URL:** `http://localhost:8001/api/v1/predict-action`
+        **URL:** `http://localhost:8005/api/v1/predict-action`
       operationId: predictAction
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true
@@ -1820,10 +1820,10 @@ paths:
       description: |
         Get LLM-generated explanation for AI decisions.
         
-        **URL:** `http://localhost:8001/api/v1/explain-decision`
+        **URL:** `http://localhost:8005/api/v1/explain-decision`
       operationId: explainDecision
       servers:
-        - url: http://localhost:8001
+        - url: http://localhost:8005
           description: NavSwap AI Prediction Service
       requestBody:
         required: true

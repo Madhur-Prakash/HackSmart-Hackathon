@@ -105,7 +105,7 @@ The EV Charging Platform follows a microservices architecture with the following
 |---------|------|---------|---------|
 | Kafka | 9092 | - | Message broker |
 | Kafka UI | - | 8082 | Kafka monitoring |
-| Redis | 6379 | 8001 | Cache & RedisInsight |
+| Redis | 6379 | 8005 | Cache & RedisInsight |
 | PostgreSQL | 5432 | - | Primary database |
 | pgAdmin | - | 5050 | Database management |
 | Zookeeper | 2181 | - | Kafka coordination |
@@ -944,7 +944,7 @@ Logs are JSON-formatted for easy parsing:
 | Service | URL | Purpose |
 |---------|-----|---------|
 | Kafka UI | http://localhost:8082 | Message broker monitoring |
-| RedisInsight | http://localhost:8001 | Redis cache inspection |
+| RedisInsight | http://localhost:8005 | Redis cache inspection |
 | pgAdmin | http://localhost:5050 | Database management |
 
 ---
