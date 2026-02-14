@@ -68,8 +68,9 @@ const swaggerOptions = {
       description: 'API documentation for the EV Charging Platform',
     },
     servers: [
-      { url: 'http://localhost:3000', description: 'API Gateway' },
+      { url: '/', description: 'API Gateway' },
     ],
+
   },
   apis: [
     // Only this file for now, can add more as needed
