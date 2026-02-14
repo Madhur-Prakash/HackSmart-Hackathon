@@ -62,12 +62,10 @@ console.log(response.data.data.recommendations);
 
 | Service | URL | Used For |
 |---------|-----|----------|
-| **API Gateway** | `http://localhost:3000` | Most frontend operations |
-| **Recommendation Service** | `http://localhost:3005` | Selection & feedback tracking |
-| **Ingestion Service** | `http://localhost:3001` | Real-time data ingestion (IoT) |
-| **External AI** | `http://localhost:8081` | Direct AI predictions |
+| **Unified Backend** | `http://localhost:3000` | All frontend operations |
+| **Model API** | `http://localhost:8005` | ML model inference |
 
-> **For Frontend Apps:** Use **port 3000** (API Gateway) for most operations. Only use port 3005 for recording selections and feedback.
+> **For Frontend Apps:** Use **port 3000** for all operations. All endpoints are served from a single unified backend.
 
 ---
 
@@ -397,7 +395,7 @@ Retrieves a previously generated recommendation. Cache expires after 5 minutes.
 
 ```javascript
 const requestId = 'REQ_207e9e22-1526-4765-be1e-1601b631e1c4';
-const response = await fetch(`http://localhost:3005/recommend/${requestId}`);
+const response = await fetch(`http://localhost:3000/recommend/${requestId}`);
 ```
 
 #### Response (Success)
@@ -441,7 +439,7 @@ Records when user selects a station. Use for analytics and model improvement.
 ```javascript
 const requestId = 'REQ_207e9e22-1526-4765-be1e-1601b631e1c4';
 
-const response = await fetch(`http://localhost:3005/recommend/${requestId}/select`, {
+const response = await fetch(`http://localhost:3000/recommend/${requestId}/select`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -452,7 +450,7 @@ const response = await fetch(`http://localhost:3005/recommend/${requestId}/selec
 
 ```typescript
 // TypeScript/Axios
-await axios.post(`http://localhost:3005/recommend/${requestId}/select`, {
+await axios.post(`http://localhost:3000/recommend/${requestId}/select`, {
   stationId: 'ST_101'
 });
 ```
@@ -487,7 +485,7 @@ Records user feedback on recommendation quality.
 ```javascript
 const requestId = 'REQ_207e9e22-1526-4765-be1e-1601b631e1c4';
 
-const response = await fetch(`http://localhost:3005/recommend/${requestId}/feedback`, {
+const response = await fetch(`http://localhost:3000/recommend/${requestId}/feedback`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -898,7 +896,7 @@ Ingests real-time telemetry data from charging stations.
 #### Request
 
 ```javascript
-const response = await fetch('http://localhost:3001/ingest/station', {
+const response = await fetch('http://localhost:3000/ingest/station', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -948,7 +946,7 @@ Ingests telemetry for multiple stations at once.
 #### Request
 
 ```javascript
-const response = await fetch('http://localhost:3001/ingest/station/batch', {
+const response = await fetch('http://localhost:3000/ingest/station/batch', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -985,7 +983,7 @@ Ingests health status for a station. **Must be called before `GET /station/{id}/
 #### Request
 
 ```javascript
-const response = await fetch('http://localhost:3001/ingest/health', {
+const response = await fetch('http://localhost:3000/ingest/health', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1073,7 +1071,7 @@ Ingests power grid status data.
 #### Request
 
 ```javascript
-const response = await fetch('http://localhost:3001/ingest/grid', {
+const response = await fetch('http://localhost:3000/ingest/grid', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1443,7 +1441,7 @@ async function getRecommendations(params: RecommendationRequest) {
 await fetch('http://localhost:3000/recommend');
 
 // ✅ Correct - Use Recommendation Service for selection
-await fetch('http://localhost:3005/recommend/REQ_123/select', { method: 'POST' });
+await fetch('http://localhost:3000/recommend/REQ_123/select', { method: 'POST' });
 
 // ❌ Wrong - Selection is not on API Gateway
 await fetch('http://localhost:3000/recommend/REQ_123/select', { method: 'POST' });
@@ -1460,7 +1458,7 @@ const { requestId } = response.data.data;
 localStorage.setItem('lastRequestId', requestId);
 
 // Use it when user selects a station
-await axios.post(`http://localhost:3005/recommend/${requestId}/select`, {
+await axios.post(`http://localhost:3000/recommend/${requestId}/select`, {
   stationId: selectedStation.stationId
 });
 ```

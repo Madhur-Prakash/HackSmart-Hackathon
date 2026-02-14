@@ -148,6 +148,27 @@ export function createApiApp(): Application {
 
   /**
    * @swagger
+   * /:
+   *   get:
+   *     summary: API root - returns service info
+   *     tags: [Health]
+   *     responses:
+   *       200:
+   *         description: Service information
+   */
+  app.get('/', (req: Request, res: Response) => {
+    res.json({
+      name: 'EV Charging Platform API',
+      version: '1.0.0',
+      status: 'running',
+      docs: '/api-docs',
+      health: '/health',
+      ready: '/ready'
+    });
+  });
+
+  /**
+   * @swagger
    * /health:
    *   get:
    *     summary: Health check

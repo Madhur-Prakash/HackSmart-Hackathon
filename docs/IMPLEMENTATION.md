@@ -27,7 +27,7 @@ Complete technical documentation for the real-time EV charging recommendation an
 ### Architecture Principles
 
 1. **Event-Driven**: All data flows through Kafka topics
-2. **Stateless Services**: Services can be scaled horizontally
+2. **Unified Backend**: Single application with integrated consumers
 3. **Cache-First**: Redis for hot data, PostgreSQL for cold
 4. **Resilient**: Circuit breakers for external dependencies
 5. **Observable**: Structured logging and metrics
@@ -59,21 +59,31 @@ The platform uses 11 specialized ML models:
 ### Service Communication
 
 ```
-┌─────────────┐     Kafka      ┌─────────────┐
-│  Ingestion  │ ──────────────▶│  Features   │
-└─────────────┘                └─────────────┘
-                                     │
-                                     │ Kafka
-                                     ▼
-                               ┌─────────────┐
-                               │   Scoring   │
-                               └─────────────┘
-                                     │
-                                     │ Redis
-                                     ▼
-┌─────────────┐    HTTP       ┌─────────────┐
-│     API     │◀──────────────│Optimization │
-└─────────────┘               └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    Unified Backend (:3000)                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  API Server (Express)                                  │  │
+│  │  /ingest/* → Kafka Producer → station.telemetry       │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                          │                                   │
+│                          ▼                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Features Consumer (Kafka)                             │  │
+│  │  station.telemetry → Feature Engineering → Redis       │  │
+│  │                   → Kafka Producer → station.features  │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                          │                                   │
+│                          ▼                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  Scoring Consumer (Kafka)                              │  │
+│  │  station.features → Scoring → Redis (sorted set)       │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                          │                                   │
+│                          ▼                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  /recommend → Optimization → LLM → Response            │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---

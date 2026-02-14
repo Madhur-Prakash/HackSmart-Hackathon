@@ -22,7 +22,7 @@ This comprehensive guide covers how to integrate with the EV Charging Platform, 
 
 ## Architecture Overview
 
-The EV Charging Platform follows a microservices architecture with the following components:
+The EV Charging Platform uses a unified backend architecture with integrated Kafka consumers:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -32,23 +32,22 @@ The EV Charging Platform follows a microservices architecture with the following
                                    │
                                    ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          API Gateway (Port 3000)                                 │
-│    • Request routing        • Rate limiting        • Authentication              │
-│    • Recommendation API     • Admin Dashboard      • Station Queries             │
+│                      Unified Backend (Port 3000)                                 │
+│    • All REST endpoints    • Integrated Kafka consumers    • ML inference        │
+│    • /recommend, /ingest/*, /queue/*, /delivery/*, /admin/*, /fault/*           │
 └──────────────────────────────────┬──────────────────────────────────────────────┘
                                    │
            ┌───────────────────────┼───────────────────────┐
            │                       │                       │
            ▼                       ▼                       ▼
 ┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
-│  Ingestion Svc   │    │ Recommendation   │    │   LLM Service    │
-│   (Port 3001)    │    │   (Port 3005)    │    │   (Port 3006)    │
-│ • Station data   │    │ • User requests  │    │ • Explanations   │
-│ • Health data    │    │ • Selection/FB   │    │ • Admin summary  │
-│ • Grid status    │    │ • Caching        │    │ • Groq/Fallback  │
-└────────┬─────────┘    └────────┬─────────┘    └──────────────────┘
-         │                       │
-         ▼                       ▼
+│  Kafka Producer  │    │ Features Consumer│    │ Scoring Consumer │
+│ • Publishes      │    │ • Telemetry →    │    │ • Features →     │
+│   telemetry      │    │   Feature eng.   │    │   Scoring        │
+│   to topics      │    │ • Caches to Redis│    │ • Redis rankings │
+└────────┬─────────┘    └────────┬─────────┘    └──────────┬───────┘
+         │                       │                         │
+         ▼                       ▼                         ▼
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                            Apache Kafka                                          │
 │   Topics: station.telemetry | station.health | station.features | station.scores │
@@ -90,14 +89,8 @@ The EV Charging Platform follows a microservices architecture with the following
 
 | Service | Port | Base URL | Purpose |
 |---------|------|----------|---------|
-| API Gateway | 3000 | `http://localhost:3000` | Main entry point for clients |
-| Ingestion Service | 3001 | `http://localhost:3001` | Data ingestion from IoT/stations |
-| Features Service | 3002 | `http://localhost:3002` | Feature engineering (Kafka consumer) |
-| Scoring Service | 3003 | `http://localhost:3003` | Station scoring (Kafka consumer) |
-| Optimization Service | 3004 | `http://localhost:3004` | Optimization algorithms |
-| Recommendation Service | 3005 | `http://localhost:3005` | Recommendation handling |
-| LLM Service | 3006 | `http://localhost:3006` | LLM-powered explanations |
-| External AI Service | 8081 | `http://localhost:8081` | AI predictions (mock) |
+| Unified Backend | 3000 | `http://localhost:3000` | All REST endpoints + integrated Kafka consumers |
+| Model API | 8005 | `http://localhost:8005` | Python ML model inference |
 
 ### Infrastructure Ports
 

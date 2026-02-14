@@ -2,7 +2,7 @@
 
 > **Real-Time AI-Powered EV Charging Station Recommendation System**
 
-A production-grade microservices backend for intelligent EV charging recommendations with real-time data processing, multi-objective optimization, and LLM-powered explanations.
+A production-grade unified backend for intelligent EV charging recommendations with real-time data processing, multi-objective optimization, and LLM-powered explanations.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" />
@@ -39,7 +39,7 @@ A production-grade microservices backend for intelligent EV charging recommendat
 | 🧠 **AI-Powered Scoring** | Multi-objective optimization with ML predictions |
 | 💬 **LLM Explanations** | GPT-4 powered human-readable recommendations |
 | 🛡️ **Resilient Design** | Circuit breakers, retries, and graceful degradation |
-| 📈 **Auto-Scaling Ready** | Microservices architecture for independent scaling |
+| 📈 **Unified Architecture** | Single app with integrated Kafka consumers |
 | 🐳 **Docker Native** | Full containerization with docker-compose |
 
 ---
@@ -55,35 +55,32 @@ A production-grade microservices backend for intelligent EV charging recommendat
 │              │                                                              │
 │              ▼                                                              │
 │   ┌─────────────────────────────────────────────────────────────────────┐  │
-│   │                    🌐 API Gateway (Port 3000)                        │  │
-│   │         /recommend  │  /ingest/*  │  /admin/*  │  /health           │  │
+│   │                  🚀 Unified Backend (Port 3000)                      │  │
+│   │   /recommend │ /ingest/* │ /queue/* │ /admin/* │ /delivery/* │ ...  │  │
 │   └─────────────────────────────────────────────────────────────────────┘  │
 │              │                                                              │
 │   ┌──────────┴──────────────────────────────────────────────────────────┐  │
+│   │                    Integrated Components                             │  │
 │   │                                                                      │  │
-│   │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────┐  │  │
-│   │  │  Ingestion  │───▶│   Kafka     │───▶│  Feature Engineering    │  │  │
-│   │  │   :3001     │    │   :9092     │    │        :3002            │  │  │
-│   │  └─────────────┘    └─────────────┘    └───────────┬─────────────┘  │  │
-│   │                                                     │                │  │
-│   │                                                     ▼                │  │
-│   │  ┌─────────────┐                     ┌─────────────────────────────┐│  │
-│   │  │   Redis     │◀───────────────────▶│     Scoring Engine         ││  │
-│   │  │   :6379     │                     │         :3003              ││  │
-│   │  └─────────────┘                     └───────────┬─────────────────┘│  │
-│   │                                                   │                  │  │
-│   │  ┌─────────────┐                                 ▼                  │  │
-│   │  │ PostgreSQL  │◀───────────────────┌───────────────────────────┐  │  │
-│   │  │   :5432     │                    │   Optimization Engine     │  │  │
-│   │  └─────────────┘                    │        :3004              │  │  │
-│   │                                     └───────────┬───────────────┘  │  │
-│   │                                                  │                  │  │
-│   │  ┌─────────────┐                                ▼                  │  │
-│   │  │   Groq /    │◀───────────────────┌───────────────────────────┐  │  │
-│   │  │  Mock AI    │                    │   Recommendation + LLM    │  │  │
-│   │  │   :8081     │                    │    :3005  │  :3006        │  │  │
-│   │  └─────────────┘                    └───────────────────────────┘  │  │
+│   │  ┌──────────────────────────────────────────────────────────────┐   │  │
+│   │  │  API Server + Ingestion + Recommendation + Queue + Delivery  │   │  │
+│   │  └──────────────────────────────────────────────────────────────┘   │  │
+│   │                           │                                          │  │
+│   │              ┌────────────┴────────────┐                            │  │
+│   │              ▼                         ▼                            │  │
+│   │  ┌─────────────────────┐    ┌─────────────────────┐                │  │
+│   │  │ Features Consumer   │    │  Scoring Consumer   │                │  │
+│   │  │  (Kafka Consumer)   │    │  (Kafka Consumer)   │                │  │
+│   │  └─────────────────────┘    └─────────────────────┘                │  │
 │   │                                                                      │  │
+│   └──────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│   ┌──────────────────────────────────────────────────────────────────────┐  │
+│   │                       Infrastructure                                 │  │
+│   │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
+│   │  │   Kafka     │  │   Redis     │  │ PostgreSQL  │  │  Model API  │ │  │
+│   │  │   :9092     │  │   :6379     │  │   :5432     │  │   :8005     │ │  │
+│   │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘ │  │
 │   └──────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └────────────────────────────────────────────────────────────────────────────┘
@@ -103,7 +100,7 @@ A production-grade microservices backend for intelligent EV charging recommendat
 
 ### Option 1: Local Development (Recommended)
 
-Run infrastructure in Docker, services locally for hot-reload development.
+Run infrastructure in Docker, the unified app locally for hot-reload development.
 
 ```bash
 # 1️⃣ Install dependencies
@@ -118,27 +115,22 @@ npm run infra:up
 # 4️⃣ Wait for infrastructure to be ready (~30 seconds)
 #    Check status: docker ps
 
-# 5️⃣ Start all services with hot-reload
+# 5️⃣ Start the unified app with hot-reload
 npm run dev
 ```
 
 **What starts:**
 
-| Service | Port | Color in Terminal |
-|---------|------|-------------------|
-| API Gateway | 3000 | 🔵 Blue |
-| Ingestion | 3001 | 🟢 Green |
-| Features | 3002 | 🟡 Yellow |
-| Scoring | 3003 | 🟣 Magenta |
-| Optimization | 3004 | 🔵 Cyan |
-| Recommendation | 3005 | 🔴 Red |
-| LLM | 3006 | ⚪ White |
-| Mock AI | 8081 | ⬜ Gray |
+| Component | Port | Description |
+|-----------|------|-------------|
+| Unified API | 3000 | All endpoints: /recommend, /ingest/*, /queue/*, /admin/*, etc. |
+| Features Consumer | (internal) | Kafka consumer for telemetry → features |
+| Scoring Consumer | (internal) | Kafka consumer for features → scores |
 
 **Stop everything:**
 
 ```bash
-# Stop Node.js services: Ctrl+C
+# Stop Node.js app: Ctrl+C
 # Stop infrastructure:
 npm run infra:down
 ```
@@ -188,14 +180,12 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 
 ## 🔌 Services & Ports
 
-### Application Services
+### Application
 
-| Service | Port | Description |
+| Component | Port | Description |
 |---------|------|-------------|
-| **API Gateway** | `3000` | Main REST API, handles all public/admin requests |
-| **Ingestion** | `3001` | Receives IoT telemetry, validates & publishes to Kafka |
-| **Recommendation** | `3005` | Orchestrates recommendation flow |
-| **Mock AI** | `8081` | Local AI service for development |
+| **Unified Backend** | `3000` | Main REST API with all endpoints |
+| **Model API** | `8005` | Python ML model inference server |
 
 ### Infrastructure Services
 
@@ -319,12 +309,12 @@ Content-Type: application/json
 
 ---
 
-### 📤 Batch Ingest (Ingestion Service Only)
+### 📤 Batch Ingest
 
-> ⚠️ **Note:** This endpoint is only available on the Ingestion Service port (3001)
+Batch ingest multiple stations at once.
 
 ```http
-POST http://localhost:3001/ingest/station/batch
+POST http://localhost:3000/ingest/station/batch
 Content-Type: application/json
 ```
 
@@ -431,21 +421,16 @@ curl http://localhost:3000/station/ST_101/score
 
 | Script | Description |
 |--------|-------------|
-| `npm run dev` | 🚀 Start all services with hot-reload |
-| `npm run dev:api` | Start only API Gateway |
-| `npm run dev:ingestion` | Start only Ingestion Service |
-| `npm run dev:features` | Start only Feature Engineering |
-| `npm run dev:scoring` | Start only Scoring Engine |
-| `npm run dev:optimization` | Start only Optimization Engine |
-| `npm run dev:recommendation` | Start only Recommendation Service |
-| `npm run dev:llm` | Start only LLM Service |
-| `npm run dev:mock-ai` | Start Mock AI Server |
+| `npm run dev` | 🚀 Start unified app with hot-reload |
+| `npm run dev:with-mock-ai` | Start app + Mock AI Server |
+| `npm run dev:mock-ai` | Start Mock AI Server only |
 | `npm run infra:up` | 🐳 Start infrastructure in Docker |
 | `npm run infra:down` | 🛑 Stop infrastructure |
 | `npm run infra:logs` | 📋 View infrastructure logs |
 | `npm run build` | 🔨 Compile TypeScript |
 | `npm run migrate` | 📦 Run database migrations |
 | `npm run seed` | 🌱 Seed database with sample data |
+| `npm run kafka:ensure` | 📫 Ensure Kafka topics exist |
 | `npm run kafka:topics` | 📫 Create Kafka topics |
 | `npm test` | 🧪 Run tests |
 | `npm run lint` | 🔍 Run ESLint |

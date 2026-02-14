@@ -7,11 +7,11 @@ Complete API documentation for the EV Charging Platform with Battery Swap Queue 
 ## Base URL
 
 ```
-Development: http://localhost:3000 (API Gateway)
-Development: http://localhost:3001 (Ingestion Service)
-Development: http://localhost:3005 (Recommendation Service)
+Development: http://localhost:3000
 Production:  https://api.ev-platform.com
 ```
+
+All endpoints are served from a single unified backend on port 3000.
 
 ## Authentication
 
@@ -1048,6 +1048,4 @@ Access-Control-Allow-Headers: Content-Type, Authorization
 ## Additional Resources
 
 - **Interactive API Docs**: http://localhost:3000/docs (Swagger UI)
-- **Recommendation Service Docs**: http://localhost:3005/docs
-- **Ingestion Service Docs**: http://localhost:3001/docs
 - **Complete Integration Guide**: [INTEGRATION_GUIDE.md](../INTEGRATION_GUIDE.md)
