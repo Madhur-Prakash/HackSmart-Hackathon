@@ -15,6 +15,7 @@ import { processRecommendation } from '../recommendation';
 import { getCachedScore } from '../scoring';
 import { generateAdminSummary } from '../llm';
 import { getCircuitBreakerStatus, fetchAllPredictions } from './externalAI';
+import { generateAndSaveQR, deleteQR, getQRRelativePath } from '../recommendation/qrUtil';
 
 // Import data access
 import { 
@@ -22,6 +23,11 @@ import {
   userRequestRepository, 
   recommendationLogRepository,
   systemEventRepository,
+  qrQueueRepository,
+  notificationRepository,
+  deliveryRepository,
+  driverRepository,
+  faultTicketRepository,
   checkConnection 
 } from '../../db';
 import { 
@@ -33,7 +39,17 @@ import {
   incrementCounter
 } from '../../redis';
 import { createProducer, produceMessage, TOPICS } from '../../kafka';
-import { StationTelemetry, StationHealth, UserContext, AdminSummary, SystemMetrics } from '../../types';
+import { 
+  StationTelemetry, 
+  StationHealth, 
+  UserContext, 
+  AdminSummary, 
+  SystemMetrics,
+  QRQueueEntry,
+  Delivery,
+  FaultTicket,
+  Recommendation
+} from '../../types';
 import dotenv from 'dotenv';
 import path from 'path';
 
@@ -394,6 +410,582 @@ export function createApiApp(): Application {
         },
       });
 
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Queue Management Endpoints
+  // ==========================================
+
+  /**
+   * @swagger
+   * /queue/join:
+   *   post:
+   *     summary: User confirms arrival, QR generated
+   *     tags: [Queue]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               stationId:
+   *                 type: string
+   *               userId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: QR code generated
+   */
+  app.post('/queue/join', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { stationId, userId } = req.body;
+      if (!stationId || !userId) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      const qrCode = generateId('QR');
+      const now = new Date().toISOString();
+      const entry: QRQueueEntry = {
+        id: generateId('QUEUE'),
+        stationId,
+        userId,
+        qrCode,
+        status: 'waiting',
+        joinedAt: now,
+      };
+      await qrQueueRepository.create(entry);
+      await generateAndSaveQR(qrCode);
+      const qrImagePath = getQRRelativePath(qrCode);
+      res.json({ success: true, qrCode, qrImagePath, entry });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /queue/verify:
+   *   post:
+   *     summary: Verify QR code and update live queue
+   *     tags: [Queue]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               qrCode:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: QR code verified, queue updated
+   */
+  app.post('/queue/verify', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { qrCode } = req.body;
+      if (!qrCode) {
+        return res.status(400).json({ success: false, error: 'Missing qrCode' });
+      }
+      const entry = await qrQueueRepository.findByQRCode(qrCode);
+      if (!entry) {
+        return res.status(404).json({ success: false, error: 'QR code not found' });
+      }
+      await qrQueueRepository.updateStatus(entry.id, 'verified');
+      deleteQR(qrCode);
+      const queue = await qrQueueRepository.findByStation(entry.stationId);
+      const busyCount = queue.filter((e: QRQueueEntry) => e.status === 'verified').length;
+      res.json({ success: true, entry, busyCount, queue });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /queue/swap:
+   *   post:
+   *     summary: Mark battery as swapped and dequeue user
+   *     tags: [Queue]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               qrCode:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: User dequeued, live data updated
+   */
+  app.post('/queue/swap', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { qrCode } = req.body;
+      if (!qrCode) {
+        return res.status(400).json({ success: false, error: 'Missing qrCode' });
+      }
+      const entry = await qrQueueRepository.findByQRCode(qrCode);
+      if (!entry) {
+        return res.status(404).json({ success: false, error: 'QR code not found' });
+      }
+      await qrQueueRepository.updateStatus(entry.id, 'swapped');
+      const queue = await qrQueueRepository.findByStation(entry.stationId);
+      const busyCount = queue.filter((e: QRQueueEntry) => e.status === 'verified').length;
+      res.json({ success: true, entry, busyCount, queue });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Delivery Management Endpoints
+  // ==========================================
+
+  /**
+   * @swagger
+   * /delivery/alert:
+   *   post:
+   *     summary: Alert nearby drivers for battery delivery
+   *     tags: [Delivery]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Delivery alert sent
+   */
+  app.post('/delivery/alert', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { batteryId, fromShopId, toStationId } = req.body;
+      if (!batteryId || !fromShopId || !toStationId) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      const deliveryId = generateId('DELIV');
+      const now = new Date().toISOString();
+      const delivery: Delivery = {
+        id: deliveryId,
+        batteryId,
+        fromShopId,
+        toStationId,
+        status: 'pending',
+        requestedAt: now,
+      };
+      await deliveryRepository.create(delivery);
+      const drivers = await driverRepository.findAll();
+      for (const driver of drivers) {
+        if (driver.active) {
+          await notificationRepository.create({
+            id: generateId('NOTIF'),
+            userId: driver.id,
+            type: 'delivery',
+            message: `New delivery available from shop ${fromShopId} to station ${toStationId}`,
+            read: false,
+            createdAt: now,
+          });
+        }
+      }
+      res.json({ success: true, delivery, message: 'Delivery alert sent to drivers.' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /delivery/accept:
+   *   post:
+   *     summary: Driver accepts a delivery
+   *     tags: [Delivery]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Delivery accepted
+   */
+  app.post('/delivery/accept', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { deliveryId, driverId } = req.body;
+      if (!deliveryId || !driverId) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      const delivery = await deliveryRepository.findById(deliveryId);
+      if (!delivery) {
+        return res.status(404).json({ success: false, error: 'Delivery not found' });
+      }
+      if (delivery.status !== 'pending') {
+        return res.status(400).json({ success: false, error: 'Delivery already accepted or completed' });
+      }
+      delivery.assignedDriverId = driverId;
+      delivery.status = 'accepted';
+      delivery.acceptedAt = new Date().toISOString();
+      await deliveryRepository.updateStatus(deliveryId, 'accepted');
+      await notificationRepository.create({
+        id: generateId('NOTIF'),
+        userId: 'admin',
+        type: 'delivery',
+        message: `Driver ${driverId} accepted delivery ${deliveryId}`,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+      res.json({ success: true, delivery, message: 'Delivery accepted and admin notified.' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /delivery/confirm:
+   *   post:
+   *     summary: Confirm delivery completion (admin)
+   *     tags: [Delivery]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Delivery confirmed
+   */
+  app.post('/delivery/confirm', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { deliveryId } = req.body;
+      if (!deliveryId) {
+        return res.status(400).json({ success: false, error: 'Missing deliveryId' });
+      }
+      const delivery = await deliveryRepository.findById(deliveryId);
+      if (!delivery) {
+        return res.status(404).json({ success: false, error: 'Delivery not found' });
+      }
+      delivery.status = 'delivered';
+      delivery.deliveredAt = new Date().toISOString();
+      await deliveryRepository.updateStatus(deliveryId, 'delivered');
+      if (delivery.assignedDriverId) {
+        await notificationRepository.create({
+          id: generateId('NOTIF'),
+          userId: delivery.assignedDriverId,
+          type: 'delivery',
+          message: `Delivery ${deliveryId} marked as delivered by admin`,
+          read: false,
+          createdAt: new Date().toISOString(),
+        });
+      }
+      res.json({ success: true, delivery, message: 'Delivery confirmed and driver notified.' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/deliveries:
+   *   get:
+   *     summary: Get all deliveries (admin)
+   *     tags: [Delivery]
+   *     responses:
+   *       200:
+   *         description: List of deliveries
+   */
+  app.get('/admin/deliveries', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const deliveries = await deliveryRepository.findAll();
+      res.json({ success: true, deliveries });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /driver/{driverId}/deliveries:
+   *   get:
+   *     summary: Get all deliveries for a driver
+   *     tags: [Delivery]
+   *     parameters:
+   *       - in: path
+   *         name: driverId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: List of deliveries for driver
+   */
+  app.get('/driver/:driverId/deliveries', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { driverId } = req.params;
+      const deliveries = await deliveryRepository.findByDriver(driverId);
+      res.json({ success: true, deliveries });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Fault & Ticket Management Endpoints
+  // ==========================================
+
+  /**
+   * @swagger
+   * /ticket/manual:
+   *   post:
+   *     summary: Manually raise a fault ticket
+   *     tags: [Fault]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Ticket created
+   */
+  app.post('/ticket/manual', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { stationId, reportedBy, faultLevel, description } = req.body;
+      if (!stationId || !reportedBy || !faultLevel || !description) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      const ticketId = generateId('TICKET');
+      const now = new Date().toISOString();
+      const ticket: FaultTicket = {
+        id: ticketId,
+        stationId,
+        reportedBy,
+        faultLevel,
+        description,
+        status: 'open',
+        createdAt: now,
+        updatedAt: now,
+      };
+      await faultTicketRepository.create(ticket);
+      await notificationRepository.create({
+        id: generateId('NOTIF'),
+        userId: 'admin',
+        type: 'ticket',
+        message: `Manual ticket raised at station ${stationId}: ${description}`,
+        read: false,
+        createdAt: now,
+      });
+      res.json({ success: true, ticket, message: 'Ticket raised and admin notified.' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /fault/report:
+   *   post:
+   *     summary: Report a station fault
+   *     tags: [Fault]
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *     responses:
+   *       200:
+   *         description: Fault reported
+   */
+  app.post('/fault/report', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { stationId, reportedBy, faultLevel, description } = req.body;
+      if (!stationId || !reportedBy || !faultLevel || !description) {
+        return res.status(400).json({ success: false, error: 'Missing required fields' });
+      }
+      const ticketId = generateId('TICKET');
+      const now = new Date().toISOString();
+      const ticket: FaultTicket = {
+        id: ticketId,
+        stationId,
+        reportedBy,
+        faultLevel,
+        description,
+        status: 'open',
+        createdAt: now,
+        updatedAt: now,
+      };
+      let ticketCreated = false;
+      if (faultLevel === 'critical') {
+        await faultTicketRepository.create(ticket);
+        ticketCreated = true;
+        await notificationRepository.create({
+          id: generateId('NOTIF'),
+          userId: 'admin',
+          type: 'ticket',
+          message: `Critical fault reported at station ${stationId}: ${description}`,
+          read: false,
+          createdAt: now,
+        });
+      }
+      res.json({
+        success: true,
+        ticketCreated,
+        ticket: ticketCreated ? ticket : undefined,
+        message: ticketCreated ? 'Critical fault, ticket raised and admin notified.' : 'Fault reported.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /admin/tickets:
+   *   get:
+   *     summary: Get all fault tickets (admin)
+   *     tags: [Fault]
+   *     responses:
+   *       200:
+   *         description: List of tickets
+   */
+  app.get('/admin/tickets', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const tickets = await faultTicketRepository.findAll();
+      res.json({ success: true, tickets });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Additional Recommendation Endpoints
+  // ==========================================
+
+  /**
+   * @swagger
+   * /recommend/{requestId}:
+   *   get:
+   *     summary: Get cached recommendation
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Cached recommendation
+   */
+  app.get('/recommend/:requestId', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { requestId } = req.params;
+      const cached = await getJSON<Recommendation>(`recommendation:${requestId}`);
+      if (!cached) {
+        return res.status(404).json({
+          success: false,
+          error: 'Recommendation not found or expired',
+        });
+      }
+      res.json({
+        success: true,
+        data: cached,
+        meta: { cacheHit: true },
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /recommend/{requestId}/select:
+   *   post:
+   *     summary: Record station selection
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               stationId:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Selection recorded
+   */
+  app.post('/recommend/:requestId/select', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { requestId } = req.params;
+      const { stationId } = req.body;
+      if (!stationId) {
+        return res.status(400).json({
+          success: false,
+          error: 'stationId is required',
+        });
+      }
+      await recommendationLogRepository.recordSelection(requestId, stationId);
+      logEvent(logger, 'station_selected', { requestId, stationId });
+      res.json({ success: true, message: 'Selection recorded' });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  /**
+   * @swagger
+   * /recommend/{requestId}/feedback:
+   *   post:
+   *     summary: Record feedback
+   *     tags: [Recommendation]
+   *     parameters:
+   *       - in: path
+   *         name: requestId
+   *         required: true
+   *         schema:
+   *           type: string
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               rating:
+   *                 type: number
+   *     responses:
+   *       200:
+   *         description: Feedback recorded
+   */
+  app.post('/recommend/:requestId/feedback', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { requestId } = req.params;
+      const { rating } = req.body;
+      if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({
+          success: false,
+          error: 'rating must be a number between 1 and 5',
+        });
+      }
+      await recommendationLogRepository.recordFeedback(requestId, rating);
+      logEvent(logger, 'feedback_recorded', { requestId, rating });
+      res.json({ success: true, message: 'Feedback recorded' });
     } catch (error) {
       next(error);
     }

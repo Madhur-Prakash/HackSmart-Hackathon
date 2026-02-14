@@ -7,4 +7,9 @@ export {
   userRequestRepository,
   recommendationLogRepository,
   systemEventRepository,
+  qrQueueRepository,
+  notificationRepository,
+  deliveryRepository,
+  driverRepository,
+  faultTicketRepository,
 } from './repositories';

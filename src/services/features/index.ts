@@ -212,9 +212,10 @@ export async function calculateUserContextFeatures(
 }
 
 /**
- * Start the feature engineering service
+ * Start the feature engineering consumer (non-blocking)
+ * Returns cleanup function for graceful shutdown
  */
-async function start(): Promise<void> {
+export async function startFeaturesConsumer(): Promise<() => Promise<void>> {
   try {
     // Initialize Kafka connections
     consumer = await createConsumer('features');
@@ -228,17 +229,35 @@ async function start(): Promise<void> {
 
     logger.info('Feature service subscribed to topics');
 
-    // Start consuming
+    // Start consuming (non-blocking)
     await consumer.run({
       eachMessage: processMessage,
     });
 
     logger.info('Feature engineering service started');
 
-    // Graceful shutdown
-    const shutdown = async () => {
+    // Return cleanup function
+    return async () => {
       logger.info('Shutting down feature service');
       await disconnectKafka(producer, consumer);
+    };
+
+  } catch (error) {
+    logger.error('Failed to start feature service', { error });
+    throw error;
+  }
+}
+
+/**
+ * Start the feature engineering service (standalone mode)
+ */
+async function start(): Promise<void> {
+  try {
+    const cleanup = await startFeaturesConsumer();
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      await cleanup();
       process.exit(0);
     };
 

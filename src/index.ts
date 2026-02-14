@@ -2,11 +2,16 @@ import { config } from './config';
 import { createLogger } from './utils/logger';
 import { createApiApp } from './services/api';
 import { runMigrations, seedDatabase } from './db';
-import { createTopics } from './kafka';
+import { ensureTopics } from './kafka';
 import { getRedisClient, closeRedis } from './redis';
 import { closeDb, systemEventRepository } from './db';
+import { startFeaturesConsumer } from './services/features';
+import { startScoringConsumer } from './services/scoring';
 
 const logger = createLogger('main');
+
+// Store cleanup functions for graceful shutdown
+const cleanupFunctions: Array<() => Promise<void>> = [];
 
 /**
  * Initialize all services and start the application
@@ -33,13 +38,27 @@ async function bootstrap(): Promise<void> {
     await seedDatabase();
     logger.info('Database seeding complete');
 
-    // Create Kafka topics
+    // Ensure Kafka topics exist before starting consumers
     logger.info('Setting up Kafka topics...');
     try {
-      await createTopics();
+      await ensureTopics();
       logger.info('Kafka topics ready');
     } catch (kafkaError) {
       logger.warn('Kafka setup skipped (broker may not be available)', { error: kafkaError });
+    }
+
+    // Start Kafka consumers for features and scoring
+    logger.info('Starting Kafka consumers...');
+    try {
+      const featuresCleanup = await startFeaturesConsumer();
+      cleanupFunctions.push(featuresCleanup);
+      logger.info('Features consumer started');
+
+      const scoringCleanup = await startScoringConsumer();
+      cleanupFunctions.push(scoringCleanup);
+      logger.info('Scoring consumer started');
+    } catch (consumerError) {
+      logger.warn('Kafka consumers skipped (broker may not be available)', { error: consumerError });
     }
 
     // Start API Gateway
@@ -51,6 +70,7 @@ async function bootstrap(): Promise<void> {
       logger.info(`📊 Health check: http://localhost:${port}/health`);
       logger.info(`📍 Recommendations: http://localhost:${port}/recommend`);
       logger.info(`🔧 Admin dashboard: http://localhost:${port}/admin/summary`);
+      logger.info(`📑 API Docs: http://localhost:${port}/docs`);
 
       // Log startup event
       systemEventRepository.create({
@@ -77,6 +97,16 @@ async function bootstrap(): Promise<void> {
         message: `System shutting down (${signal})`,
         sourceService: 'main',
       }).catch(() => {});
+
+      // Close Kafka consumers
+      logger.info('Closing Kafka consumers...');
+      for (const cleanup of cleanupFunctions) {
+        try {
+          await cleanup();
+        } catch (err) {
+          logger.warn('Error during cleanup', { error: err });
+        }
+      }
 
       // Close server
       server.close(() => {

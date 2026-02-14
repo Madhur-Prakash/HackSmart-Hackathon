@@ -271,9 +271,10 @@ export async function getCachedScore(stationId: string): Promise<StationScore | 
 }
 
 /**
- * Start the scoring service
+ * Start the scoring consumer (non-blocking)
+ * Returns cleanup function for graceful shutdown
  */
-async function start(): Promise<void> {
+export async function startScoringConsumer(): Promise<() => Promise<void>> {
   try {
     // Initialize Kafka connections
     consumer = await createConsumer('scoring');
@@ -287,17 +288,35 @@ async function start(): Promise<void> {
 
     logger.info('Scoring service subscribed to topics');
 
-    // Start consuming
+    // Start consuming (non-blocking)
     await consumer.run({
       eachMessage: processMessage,
     });
 
     logger.info('Scoring service started');
 
-    // Graceful shutdown
-    const shutdown = async () => {
+    // Return cleanup function
+    return async () => {
       logger.info('Shutting down scoring service');
       await disconnectKafka(producer, consumer);
+    };
+
+  } catch (error) {
+    logger.error('Failed to start scoring service', { error });
+    throw error;
+  }
+}
+
+/**
+ * Start the scoring service (standalone mode)
+ */
+async function start(): Promise<void> {
+  try {
+    const cleanup = await startScoringConsumer();
+
+    // Graceful shutdown
+    const shutdown = async () => {
+      await cleanup();
       process.exit(0);
     };
 
