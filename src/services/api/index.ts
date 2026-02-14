@@ -100,13 +100,33 @@ export function createApiApp(): Application {
   // Swagger UI
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-  // Security middleware
-  app.use(helmet());
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.BACKEND_URL,
+].filter(Boolean); // removes undefined/null
+
+
+  // CORS - must be before other middleware
   app.use(cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // allow requests with no origin (Postman, mobile apps, curl)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
+    credentials: process.env.FRONTEND_URL ? true : false
+  }));
+
+  // Security middleware
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    crossOriginEmbedderPolicy: false
   }));
 
   // Compression
@@ -161,7 +181,7 @@ export function createApiApp(): Application {
       name: 'EV Charging Platform API',
       version: '1.0.0',
       status: 'running',
-      docs: '/api-docs',
+      docs: '/docs',
       health: '/health',
       ready: '/ready'
     });
