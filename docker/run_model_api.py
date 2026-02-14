@@ -12,8 +12,15 @@ import os
 import numpy as np
 import pandas as pd
 from datetime import datetime
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins for simplicity
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class PredictRequest(BaseModel):
     model_path: str
