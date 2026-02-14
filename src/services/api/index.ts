@@ -100,24 +100,9 @@ export function createApiApp(): Application {
   // Swagger UI
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL,
-  process.env.BACKEND_URL,
-].filter(Boolean); // removes undefined/null
-
-
   // CORS - must be before other middleware
   app.use(cors({
-    origin: (origin, callback) => {
-      // allow requests with no origin (Postman, mobile apps, curl)
-      if (!origin) return callback(null, true);
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
+    origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: process.env.FRONTEND_URL ? true : false
