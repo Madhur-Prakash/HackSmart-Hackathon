@@ -11,3 +11,5 @@ export {
 } from './client';
 
 export { createTopics, deleteTopics, getTopicMetadata } from './createTopics';
+
+export { ensureTopics, waitForKafka, createAllTopics } from './ensureTopics';
