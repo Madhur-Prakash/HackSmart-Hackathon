@@ -97,10 +97,7 @@ const swaggerSpec = swaggerJSDoc(swaggerOptions);
 export function createApiApp(): Application {
   const app = express();
 
-  // Swagger UI
-  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
-  // CORS - must be before other middleware
+  // CORS - must be first
   app.use(cors({
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -111,8 +108,12 @@ export function createApiApp(): Application {
   // Security middleware
   app.use(helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
-    crossOriginEmbedderPolicy: false
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: false
   }));
+
+  // Swagger UI
+  app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
   // Compression
   app.use(compression());
