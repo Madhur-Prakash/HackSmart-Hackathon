@@ -3,6 +3,7 @@ import { runModel } from '../../utils/modelRunner';
 import { createLogger, logMetrics, logEvent } from '../../utils/logger';
 import { round, retry } from '../../utils/helpers';
 import { RankedStation, RecommendationRequest, StationScore } from '../../types';
+import axios from 'axios';
 
 const logger = createLogger('llm-service');
 
@@ -129,9 +130,24 @@ export async function generateAdminSummary(data: {
   try {
     const prompt = buildAdminSummaryPrompt(data);
 
-    const result = await runModel(config.models.gemini, { prompt: buildAdminSummaryPrompt(data) });
+    const result = await axios.post('https://api.groq.com/openai/v1/chat/completions', {
+                model: config.groq.model,
+                messages: [
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+                top_p: 1,
+                stream: false
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${config.groq.apiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 30000
+            });
     logEvent(logger, 'llm.admin_summary.generated');
-    return result.summary || generateFallbackAdminSummary(data);
+    return result.data.choices[0].message.content || generateFallbackAdminSummary(data);
   } catch (error) {
     logger.error('LLM admin summary failed, using fallback', { error });
     return generateFallbackAdminSummary(data);
