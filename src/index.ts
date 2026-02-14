@@ -12,6 +12,7 @@ const logger = createLogger('main');
 
 // Store cleanup functions for graceful shutdown
 const cleanupFunctions: Array<() => Promise<void>> = [];
+let isShuttingDown = false;
 
 /**
  * Initialize all services and start the application
@@ -88,37 +89,60 @@ async function bootstrap(): Promise<void> {
 
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
+      // Prevent multiple shutdown attempts
+      if (isShuttingDown) {
+        logger.info('Shutdown already in progress, ignoring...');
+        return;
+      }
+      isShuttingDown = true;
+
       logger.info(`Received ${signal}, starting graceful shutdown...`);
 
-      // Log shutdown event
-      await systemEventRepository.create({
-        eventType: 'system_stop',
-        severity: 'info',
-        message: `System shutting down (${signal})`,
-        sourceService: 'main',
-      }).catch(() => {});
+      // Set a hard timeout to force exit if graceful shutdown hangs
+      const forceExitTimeout = setTimeout(() => {
+        logger.warn('Graceful shutdown timed out, forcing exit...');
+        process.exit(1);
+      }, 10000);
 
-      // Close Kafka consumers
-      logger.info('Closing Kafka consumers...');
-      for (const cleanup of cleanupFunctions) {
-        try {
-          await cleanup();
-        } catch (err) {
-          logger.warn('Error during cleanup', { error: err });
+      try {
+        // Log shutdown event
+        await systemEventRepository.create({
+          eventType: 'system_stop',
+          severity: 'info',
+          message: `System shutting down (${signal})`,
+          sourceService: 'main',
+        }).catch(() => {});
+
+        // Close Kafka consumers
+        logger.info('Closing Kafka consumers...');
+        for (const cleanup of cleanupFunctions) {
+          try {
+            await cleanup();
+          } catch (err) {
+            logger.warn('Error during cleanup', { error: err });
+          }
         }
+
+        // Close server
+        await new Promise<void>((resolve) => {
+          server.close(() => {
+            logger.info('HTTP server closed');
+            resolve();
+          });
+        });
+
+        // Close connections
+        await closeRedis();
+        await closeDb();
+
+        logger.info('Graceful shutdown complete');
+        clearTimeout(forceExitTimeout);
+        process.exit(0);
+      } catch (err) {
+        logger.error('Error during shutdown', { error: err });
+        clearTimeout(forceExitTimeout);
+        process.exit(1);
       }
-
-      // Close server
-      server.close(() => {
-        logger.info('HTTP server closed');
-      });
-
-      // Close connections
-      await closeRedis();
-      await closeDb();
-
-      logger.info('Graceful shutdown complete');
-      process.exit(0);
     };
 
     process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
@@ -126,12 +150,20 @@ async function bootstrap(): Promise<void> {
 
     // Handle uncaught exceptions
     process.on('uncaughtException', (error) => {
+      // Ignore channel closed errors during shutdown (ts-node-dev IPC issue)
+      if (isShuttingDown && error.message === 'Channel closed') {
+        return;
+      }
       logger.error('Uncaught exception', { error: error.message, stack: error.stack });
-      process.exit(1);
+      if (!isShuttingDown) {
+        process.exit(1);
+      }
     });
 
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled rejection', { reason, promise });
+      if (!isShuttingDown) {
+        logger.error('Unhandled rejection', { reason, promise });
+      }
     });
 
   } catch (error) {
