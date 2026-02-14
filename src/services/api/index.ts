@@ -103,7 +103,7 @@ export function createApiApp(): Application {
     origin: process.env.FRONTEND_URL || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: process.env.FRONTEND_URL ? true : false
+    credentials: true
   }));
 
   // Security middleware
