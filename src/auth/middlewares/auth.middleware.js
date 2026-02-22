@@ -1,4 +1,4 @@
-import { User } from "../models/user.models.js";
+import { Company } from "../models/company.models.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
@@ -14,10 +14,10 @@ export const JWTVerify = asyncHandler(async (req, _, next) => { // replace res b
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
         
-        const user = await User.findById(decoded_info?._id).select("-password -refresh_token")
+        const user = await Company.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("User found:", user.user_name);
+        console.log("Company found:", user.user_name);
     
         req.user = user;  // attach user to request object
         next()

@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../constants.js";
-import {User} from "../models/user.models.js"
+import {Company} from "../models/company.models.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { create_access_token, create_refresh_token, isPasswordCorrect } from "../utils/helper.js";
@@ -20,11 +20,11 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new ApiError(400, "Email is not valid")
     }
 
-    const existing_user = await User.findOne({"email": email})
+    const existing_user = await Company.findOne({"email": email})
     // console.log("user:",existing_user);
     
     if (existing_user){
-        throw new ApiError(409, "User already exists with this email")
+        throw new ApiError(409, "Company already exists with this email")
     }
 
     const avatarLocalPath = req.files?.avatar[0]?.path; // files are uploaded on local server through multer middleware
@@ -52,7 +52,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     //  insert in db
-    const new_user = await User.create({
+    const new_user = await Company.create({
         full_name: full_name,
         avatar: avatar.url,
         cover_image: cover_image?.url || "",
@@ -61,7 +61,7 @@ const registerUser = asyncHandler( async (req, res) => {
         password: password
     })
     if(!new_user){
-        throw new ApiError(500, "User registration failed")
+        throw new ApiError(500, "Company registration failed")
     }
 
     // Remove password before sending response
@@ -96,7 +96,7 @@ const registerUser = asyncHandler( async (req, res) => {
                 user: user_data, 
                 access_token: access_token, 
                 refresh_token: refresh_token}, 
-                "User registered successfully")) 
+                "Company registered successfully")) 
             });     
 
 
@@ -105,16 +105,16 @@ const loginUser = asyncHandler(async (req, res) => {
     console.log("email:", email);
     
     if(! (user_name || email) ){
-        throw new ApiError(400, "User name or email is required");
+        throw new ApiError(400, "Company name or email is required");
     }
     if(!password){
         throw new ApiError(400, "Password is required");
     }
 
     if (user_name){
-        const user = await User.findOne({user_name: user_name});
+        const user = await Company.findOne({user_name: user_name});
         if(!user){
-            throw new ApiError(404, "User not found with this user name");
+            throw new ApiError(404, "Company not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -149,12 +149,12 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "User logged in successfully"))
+                    "Company logged in successfully"))
                 } 
     else if (email){
-        const user = await User.findOne({email: email});
+        const user = await Company.findOne({email: email});
         if(!user){
-            throw new ApiError(404, "User not found with this user name");
+            throw new ApiError(404, "Company not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -189,7 +189,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "User logged in successfully"))
+                    "Company logged in successfully"))
                 }
         })
 
@@ -200,7 +200,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized request");
     }
 
-    await User.findByIdAndUpdate(
+    await Company.findByIdAndUpdate(
         user._id,
         {
             $unset: {
@@ -212,9 +212,9 @@ const logoutUser = asyncHandler(async (req, res) => {
         }
     )
 
-    console.log("User logged out successfully:", user.user_name);
+    console.log("Company logged out successfully:", user.user_name);
     return res.status(200).clearCookie("access_token", options).clearCookie("refresh_token", options).json(
-        new ApiResponse(200, {}, "User logged out successfully"))
+        new ApiResponse(200, {}, "Company logged out successfully"))
 })
 
 
@@ -229,10 +229,10 @@ const refresh_access_token = asyncHandler(async(req, res) => {
         const decoded_info = jwt.verify(incoming_refresh_token, process.env.REFRESH_TOKEN_SECRET)
         console.log("decoded info:", decoded_info)
         
-        const user = await User.findById(decoded_info?._id)
+        const user = await Company.findById(decoded_info?._id)
             if (!user) {
                     throw new ApiError(401, "Invalid Refresh Token")}
-            console.log("User found:", user.user_name);
+            console.log("Company found:", user.user_name);
     
             // verify the refresh tken with the one that is stored in db
             console.log("Incoming refresh token:", incoming_refresh_token);
@@ -282,13 +282,13 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     if(!(new_password || confirm_password)){
         throw new ApiError(400, "Password and confirm password are required")}
     if(! (user_name || email) ){
-        throw new ApiError(400, "User name or email is required");
+        throw new ApiError(400, "Company name or email is required");
     }
     
     if (email){
-        const existing_user = await User.findOne({email: email})
+        const existing_user = await Company.findOne({email: email})
         if(!existing_user){
-            throw new ApiError(400, "User dosen't exist")}
+            throw new ApiError(400, "Company dosen't exist")}
 
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
@@ -305,9 +305,9 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
         return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"))}
 
     else if(user_name){
-        const existing_user = await User.findOne({user_name: user_name})
+        const existing_user = await Company.findOne({user_name: user_name})
         if(!existing_user){
-            throw new ApiError(400, "User dosen't exist")}
+            throw new ApiError(400, "Company dosen't exist")}
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
         if(new_password.length < 6){
@@ -344,7 +344,7 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     await user.save({validateBeforeSave: false})
 
     // alternative method to update details:
-    // const updated_user = await User.findByIdAndUpdate(
+    // const updated_user = await Company.findByIdAndUpdate(
     //     user?._id,
     // {
     //     $set: {
@@ -353,10 +353,10 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     //     }}, {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
     
     // if(!updated_user){
-    //     throw new ApiError(500, "User details update failed")}
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "User details updated successfully"))})
+    //     throw new ApiError(500, "Company details update failed")}
+    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Company details updated successfully"))})
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "User details updated successfully"))})
+    return res.status(200).json(new ApiResponse(200, {user: user}, "Company details updated successfully"))})
 
 
 const updateUserAvatar = asyncHandler(async(req, res) => {
@@ -385,13 +385,13 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     await user.save({validateBeforeSave: false}) // save the user without validating the user schema again
 
     // alernative method to update avatar:
-    // const updated_user = await User.findByIdAndUpdate(
+    // const updated_user = await Company.findByIdAndUpdate(
     //     user?._id,
     // { $set: {avatar: avatar.url}},
     // {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "User avatar updated successfully"))
+    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Company avatar updated successfully"))
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "User avatar updated successfully"))
+    return res.status(200).json(new ApiResponse(200, {user: user}, "Company avatar updated successfully"))
 })
 
 
@@ -420,13 +420,13 @@ const updateUserCoverImage = asyncHandler(async(req, res) => {
     await user.save({validateBeforeSave: false}) // save the user without validating the user schema again
 
     // alernative method to update avatar:
-    // const updated_user = await User.findByIdAndUpdate(
+    // const updated_user = await Company.findByIdAndUpdate(
     //     user?._id,
     // { $set: {cover_image: cover_image.url}},
     // {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "User cover image updated successfully"))
+    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Company cover image updated successfully"))
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "User Cover image updated successfully"))
+    return res.status(200).json(new ApiResponse(200, {user: user}, "Company Cover image updated successfully"))
 })
 
 
@@ -434,9 +434,9 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
     const {user_name} = req.params 
 
     if(!user_name?.trim()){
-        throw new ApiError(400, "User name is missing")}
+        throw new ApiError(400, "Company name is missing")}
 
-    const channel = await User.aggregate([
+    const channel = await Company.aggregate([
         {
             $match: {
                 user_name: user_name
@@ -499,7 +499,7 @@ const getUserChannelProfile = asyncHandler(async(req, res) => {
 
 
 const getWatchHistory = asyncHandler(async(req, res) => {
-    const user = await User.aggregate([
+    const user = await Company.aggregate([
         {
             $match:{
                 _id: new mongoose.Types.ObjectId(req.user._id) // this is done as when we write req.user._id in mongoose build in methods(findOne, findById etc..), it is a string and mongoose internally do it, but in aggregation pipeline, we need to explicitly convert it to ObjectId as the code of aggregation pipeline is not aware of the mongoose methods, so we need to convert it to ObjectId 
@@ -543,7 +543,7 @@ const getWatchHistory = asyncHandler(async(req, res) => {
             }
         }
     ])
-    console.log("User watch history fetched successfully", user[0])
+    console.log("Company watch history fetched successfully", user[0])
     return res.status(200).json(new ApiResponse(200, {watch_history: user[0].watch_history}, "Watch history fetched successfully"))
 })
 

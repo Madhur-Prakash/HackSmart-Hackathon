@@ -234,7 +234,7 @@ GET /recommend?userId={userId}&lat={latitude}&lon={longitude}
 
 | Parameter | Type | Required | Description |
 |-----------|------|:--------:|-------------|
-| `userId` | string | ✅ | User identifier |
+| `userId` | string | ✅ | Company identifier |
 | `lat` | number | ✅ | Latitude (-90 to 90) |
 | `lon` | number | ✅ | Longitude (-180 to 180) |
 | `vehicleType` | string | ❌ | e.g., "Tesla Model 3" |
@@ -331,7 +331,7 @@ Content-Type: application/json
 
 ---
 
-### 👤 Ingest User Context
+### 👤 Ingest Company Context
 
 ```http
 POST /ingest/user-context
