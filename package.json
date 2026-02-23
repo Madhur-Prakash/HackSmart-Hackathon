@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "description": "> **Real-Time AI-Powered EV Charging Station Recommendation System**",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/auth/index.js"
   },
   "repository": {
     "type": "git",
@@ -22,6 +23,7 @@
     "prettier": "^3.5.3"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cloudinary": "^2.6.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -29,6 +31,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.15.1",
-    "mongoose-aggregate-paginate-v2": "^1.1.4"
+    "mongoose-aggregate-paginate-v2": "^1.1.4",
+    "multer": "^2.0.2",
+    "nanoid": "^5.1.6"
   }
 }

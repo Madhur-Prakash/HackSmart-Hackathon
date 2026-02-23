@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
+import { nanoid } from "nanoid";
 import { ApiError } from "./ApiError.js";
 
 const isPasswordCorrect = async function(password, hashed_password){
@@ -37,4 +38,9 @@ const create_refresh_token = function(id){
     return refresh_token;
 }
 
-export { create_access_token, create_refresh_token, isPasswordCorrect };
+
+function generateUsername(name = "user") {
+  return `${name}_${nanoid(6)}`;
+}
+
+export { create_access_token, create_refresh_token, isPasswordCorrect, generateUsername };

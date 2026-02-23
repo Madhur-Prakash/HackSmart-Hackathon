@@ -6,20 +6,20 @@ import { options } from "../constants.js";
 import {Company} from "../models/company.models.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { create_access_token, create_refresh_token, isPasswordCorrect } from "../utils/helper.js";
+import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../utils/helper.js";
 import mongoose from "mongoose";
 
 
 const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, user_name, password} = req.body
+    const {full_name, email, phone_number, country_code, role, password} = req.body
 
-    if([full_name, email, user_name, password].some((field) => field?.trim() === "")){
+    if([full_name, email, phone_number, country_code, role, password].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
     if(!email.includes("@")){
         throw new ApiError(400, "Email is not valid")
     }
-
+    let user_name;
     const existing_user = await Company.findOne({"email": email})
     // console.log("user:",existing_user);
     
@@ -27,37 +27,24 @@ const registerUser = asyncHandler( async (req, res) => {
         throw new ApiError(409, "Company already exists with this email")
     }
 
-    const avatarLocalPath = req.files?.avatar[0]?.path; // files are uploaded on local server through multer middleware
-    // const cover_imageLocalPath = req.files?.cover_image[0]?.path; //this is not used as cover image is optional
-
-    let cover_imageLocalPath;
-    if(req.files && Array.isArray(req.files.cover_image) && req.files.cover_image.length > 0) {
-        cover_imageLocalPath = req.files.cover_image[0].path; // Get the path of the cover image file
-    }
-
-    if(!avatarLocalPath){
-        throw new ApiError(400, "Avatar is required")
-    }
-
-    // uploading avatar and cover image on cloudinary
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-
-    let cover_image = null; // Initialize cover_image as null
-    if(cover_imageLocalPath) {
-        cover_image = await uploadOnCloudinary(cover_imageLocalPath)
-    }
-    
-    if(!avatar){
-        throw new ApiError(400, "Avatar is required")
+    try {
+      user_name = generateUsername(full_name);
+    } catch (err) {
+      if (err.code === 11000) {
+        // Duplicate username — retry
+        console.warn("Username collision detected, retrying...");
+        return generateUsername(full_name); // This will generate a new username
+      }
     }
 
     //  insert in db
     const new_user = await Company.create({
         full_name: full_name,
-        avatar: avatar.url,
-        cover_image: cover_image?.url || "",
         user_name: user_name,
         email: email,
+        phone_number: phone_number,
+        country_code: country_code,
+        role: role,
         password: password
     })
     if(!new_user){

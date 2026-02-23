@@ -10,23 +10,14 @@ import {
     updateUserAvatar,
     changeCurrentPassword,
     getUserChannelProfile, 
-    getWatchHistory} from "../controllers/user.controller.js";
+    getWatchHistory} from "../controllers/company.controller.js";
 import {upload} from "../middlewares/multer.middleware.js"
 import { JWTVerify } from "../middlewares/auth.middleware.js";
 
 const router = Router()
 
 
-router.route("/register").post(upload.fields([ // using multer as a miidleware for avatar and cover_image 
-    {
-        name: "avatar", // this is same as defined in user model
-        maxCount: 1
-    },
-    {
-        name: "cover_image", // this is same as defined in user model
-        maxCount: 1
-    }
-]), registerUser)
+router.route("/register").post(registerUser)
 
 // public routes
 router.route("/login").post(loginUser) // no middleware
