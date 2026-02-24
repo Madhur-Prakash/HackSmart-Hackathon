@@ -24,11 +24,19 @@ app.use(cookieParser()) // this is done to parse cookies from the request
 
 
 // import routes
-import userRouter from './routes/user.routes.js'; 
+import companyRouter from './routes/company.routes.js'; 
+import staffRouter from './routes/staff.router.js';
+import regionalAdminRouter from './routes/regional_admin.route.js';
 import healthcheckRouter from "./routes/healthcheck.routes.js"
+import customerRouter from './routes/customer.route.js';
+import transporterRouter from './routes/transporter.route.js';
 
 // routes declaration
-app.use("/api/v1/users", userRouter)
+app.use("/api/v1/companies", companyRouter)
+app.use("/api/v1/transporters", transporterRouter)
+app.use("/api/v1/customers", customerRouter)
+app.use("/api/v1/staff", staffRouter)
+app.use("/api/v1/regional_admins", regionalAdminRouter)
 app.use("/api/v1/healthcheck", healthcheckRouter)
 
 

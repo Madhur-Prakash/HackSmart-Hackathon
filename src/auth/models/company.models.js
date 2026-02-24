@@ -22,7 +22,8 @@ const super_admin = new mongoose.Schema({
     },
     phone_number: {
         type: String,
-        length: 10,
+        minlength: 10,
+        maxlength: 10,
         required: true,
         unique: true
     },
@@ -46,7 +47,7 @@ const super_admin = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ["super_admin", "regional_admin", "transporter", "customer"]
+        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
     },
     isProfileCompleted: {
         type: Boolean,

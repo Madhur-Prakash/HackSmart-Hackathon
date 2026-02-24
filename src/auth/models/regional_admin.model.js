@@ -22,13 +22,15 @@ const regional_admin = new mongoose.Schema({
     },
     addhar_card_number: {
         type: String,
-        length: 12,
+        minlength: 12,
+        maxlength: 12,
         required: true,
         unique: true
     },
     phone_number: {
         type: String,
-        length: 10,
+        minlength: 10,
+        maxlength: 10,
         required: true,
         unique: true
     },
@@ -51,7 +53,7 @@ const regional_admin = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ["super_admin", "regional_admin", "transporter", "customer"]
+        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
     },
     isProfileCompleted: {
         type: Boolean,
@@ -60,15 +62,6 @@ const regional_admin = new mongoose.Schema({
 
 }, {
     timestamps: true
-})
-
-//  encrypting the password before saving
-regional_admin.pre("save", async function(next){  // normal func is used instead of callback func as callback func does not have access to `this` keyword
-    this.password = this.full_name.split(" ")[0] + Math.floor(Math.random() * 1000000) // auto generating the password
-
-    const salt = await bcrypt.genSalt(10); // generate a salt
-    this.password = await bcrypt.hash(this.password, salt) 
-    next()
 })
 
 export const RegionalAdmin = mongoose.model("RegionalAdmin", regional_admin)

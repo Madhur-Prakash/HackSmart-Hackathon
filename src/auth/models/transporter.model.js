@@ -22,13 +22,15 @@ const transporter = new mongoose.Schema({
     },
     driving_license_number: {
         type: String,
-        length: 15,
+        minlength: 15,
+        maxlength: 15,
         required: true,
         unique: true
     },
     phone_number: {
         type: String,
-        length: 10,
+        minlength: 10,
+        maxlength: 10,
         required: true,
         unique: true
     },
@@ -51,7 +53,7 @@ const transporter = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ["super_admin", "regional_admin", "transporter", "customer"]
+        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
     },
     isProfileCompleted: {
         type: Boolean,
