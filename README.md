@@ -1,15 +1,15 @@
-# ⚡ EV Charging Platform
+# ⚡ NavSwap - EV Charging Platform
 
-> **Real-Time AI-Powered EV Charging Station Recommendation System**
+> **Real-Time AI-Powered EV Charging Station Recommendation System with Secure Authentication**
 
-A production-grade unified backend for intelligent EV charging recommendations with real-time data processing, multi-objective optimization, and LLM-powered explanations.
+A production-grade platform for intelligent EV charging recommendations with real-time data processing, multi-objective optimization, LLM-powered explanations, and comprehensive user management.
 
 <p align="center">
   <img src="https://img.shields.io/badge/Node.js-18+-339933?style=for-the-badge&logo=node.js&logoColor=white" />
-  <img src="https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white" />
-  <img src="https://img.shields.io/badge/Kafka-2.x-231F20?style=for-the-badge&logo=apachekafka&logoColor=white" />
-  <img src="https://img.shields.io/badge/Redis-7+-DC382D?style=for-the-badge&logo=redis&logoColor=white" />
-  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" />
+  <img src="https://img.shields.io/badge/MongoDB-6.0-47A248?style=for-the-badge&logo=mongodb&logoColor=white" />
+  <img src="https://img.shields.io/badge/Express-5.x-000000?style=for-the-badge&logo=express&logoColor=white" />
+  <img src="https://img.shields.io/badge/JWT-Auth-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white" />
+  <img src="https://img.shields.io/badge/Python-3.9+-3776AB?style=for-the-badge&logo=python&logoColor=white" />
 </p>
 
 ---
@@ -34,12 +34,13 @@ A production-grade unified backend for intelligent EV charging recommendations w
 
 | Feature | Description |
 |---------|-------------|
-| 🔄 **Real-Time Streaming** | Apache Kafka for high-throughput event processing |
-| ⚡ **In-Memory Caching** | Redis for sub-millisecond response times |
+| 🔐 **Secure Authentication** | JWT-based auth with role-based access control (RBAC) |
+| 👥 **Multi-User System** | Support for Regional Admins, Companies, Customers, Staff, Transporters |
+| 📧 **Email Notifications** | Automated welcome emails and password delivery |
+| ☁️ **Cloud Storage** | Cloudinary integration for profile pictures and documents |
+| 🔄 **Token Refresh** | Automatic token rotation for enhanced security |
 | 🧠 **AI-Powered Scoring** | Multi-objective optimization with ML predictions |
-| 💬 **LLM Explanations** | GPT-4 powered human-readable recommendations |
-| 🛡️ **Resilient Design** | Circuit breakers, retries, and graceful degradation |
-| 📈 **Unified Architecture** | Single app with integrated Kafka consumers |
+| 💬 **LLM Explanations** | Groq-powered natural language explanations |
 | 🐳 **Docker Native** | Full containerization with docker-compose |
 
 ---
@@ -180,47 +181,60 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 
 ## 🔌 Services & Ports
 
-### Application
+### Application Services
 
 | Component | Port | Description |
 |---------|------|-------------|
-| **Unified Backend** | `3000` | Main REST API with all endpoints |
-| **Model API** | `8005` | Python ML model inference server |
+| **Auth API** | `8000` | Authentication & user management |
+| **Python ML API** | `8001` | ML model inference & predictions |
+| **Mock AI Server** | `8081` | Development AI endpoint |
 
-### Infrastructure Services
+### Database Services
 
 | Service | Port | Description |
 |---------|------|-------------|
-| **PostgreSQL** | `5432` | Primary database |
-| **Redis** | `6379` | Caching & real-time data |
-| **Kafka** | `9092` | Message broker |
-| **Zookeeper** | `2181` | Kafka coordination |
+| **MongoDB** | `27017` | User data & authentication |
+| **PostgreSQL** | `5432` | Station data & analytics |
+| **Redis** | `6379` | Caching & sessions |
 
-### Management UIs
+### Management Tools
 
-| Tool | URL | Credentials |
+| Tool | URL | Description |
 |------|-----|-------------|
-| **RedisInsight** | http://localhost:8001 | No auth required |
-| **Kafka UI** | http://localhost:8082 | No auth required |
-| **pgAdmin** | http://localhost:5050 | `admin@gmail.com` / `admin123` |
+| **MongoDB Compass** | `mongodb://localhost:27017` | Database management |
+| **Cloudinary** | https://cloudinary.com | Media storage |
 
 ---
 
 ## 📡 API Reference
 
-### Quick Reference
+### Authentication Endpoints
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/health` | Service health check |
-| `GET` | `/recommend` | Get station recommendations |
-| `POST` | `/ingest/station` | Ingest station telemetry |
-| `POST` | `/ingest/station/batch` | Batch ingest (port 3001) |
-| `POST` | `/ingest/user-context` | Ingest user context |
-| `GET` | `/station/:id/score` | Get station score |
-| `GET` | `/station/:id/health` | Get station health |
-| `GET` | `/admin/summary` | System summary with LLM narrative |
-| `GET` | `/admin/metrics` | Detailed system metrics |
+| `POST` | `/api/v1/customer/register` | Register new customer |
+| `POST` | `/api/v1/customer/login` | Customer login |
+| `POST` | `/api/v1/customer/logout` | Customer logout |
+| `GET` | `/api/v1/customer/current-user` | Get current user |
+| `POST` | `/api/v1/customer/refresh-token` | Refresh access token |
+| `PATCH` | `/api/v1/customer/update-profile` | Update profile |
+| `POST` | `/api/v1/customer/upload-avatar` | Upload profile picture |
+
+### Company Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/company/register` | Register new company |
+| `POST` | `/api/v1/company/login` | Company login |
+
+### Admin Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/v1/regional-admin/register` | Register admin |
+| `POST` | `/api/v1/regional-admin/login` | Admin login |
+
+**For complete API documentation, see [AUTH_API_REFERENCE.md](docs/AUTH_API_REFERENCE.md)**
 
 ---
 
@@ -589,14 +603,23 @@ Password: admin123
 
 ## 📚 Documentation
 
+### Core Documentation
+
 | Document | Description |
 |----------|-------------|
-| [openspec.yml](openspec.yml) | OpenAPI 3.0 specification |
-| [API_REFERENCE.md](docs/API_REFERENCE.md) | Complete API documentation |
-| [FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md) | **Frontend developer guide with examples** |
-| [INTEGRATION.md](docs/INTEGRATION.md) | Backend integration guide |
-| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | Technical implementation details |
-| [WORKFLOW.md](docs/WORKFLOW.md) | Data flow & sequence diagrams |
+| [AUTH_API_REFERENCE.md](docs/AUTH_API_REFERENCE.md) | 🔐 **Complete Authentication API documentation** |
+| [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) | 🔗 **Integration guide with code examples** |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | 📡 Recommendation API documentation |
+| [FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md) | 💻 Frontend developer guide |
+
+### Technical Documentation
+
+| Document | Description |
+|----------|-------------|
+| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 🔧 Technical implementation details |
+| [WORKFLOW.md](docs/WORKFLOW.md) | 📊 Data flow & sequence diagrams |
+| [INTEGRATION.md](docs/INTEGRATION.md) | 🔌 Backend integration guide |
+| [openspec.yml](openspec.yml) | 📝 OpenAPI 3.0 specification |
 
 ---
 
