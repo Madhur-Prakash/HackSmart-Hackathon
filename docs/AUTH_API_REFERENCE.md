@@ -188,12 +188,9 @@ POST /company/register
   "full_name": "Tesla Charging Inc",
   "email": "contact@tesla-charging.com",
   "phone_number": "9876543210",
-  "addhar_card_number": "987654321098",
   "country_code": "+1",
-  "role": "company",
-  "company_name": "Tesla Charging",
-  "company_address": "123 Electric Ave, San Francisco, CA",
-  "company_registration_number": "REG123456"
+  "password": "123456",
+  "role": "super_admin"
 }
 ```
 
