@@ -206,35 +206,54 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 
 ---
 
-## 📡 API Reference
+## 📡 API Reference — Authentication (Port 8000)
 
-### Authentication Endpoints
+> **📖 Full documentation:** [API Reference](docs/API_REFERENCE.md) | [Endpoint Cheat Sheet](docs/ENDPOINTS_CHEATSHEET.md) | [Integration Guide](docs/INTEGRATION_GUIDE.md)
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/customer/register` | Register new customer |
-| `POST` | `/api/v1/customer/login` | Customer login |
-| `POST` | `/api/v1/customer/logout` | Customer logout |
-| `GET` | `/api/v1/customer/current-user` | Get current user |
-| `POST` | `/api/v1/customer/refresh-token` | Refresh access token |
-| `PATCH` | `/api/v1/customer/update-profile` | Update profile |
-| `POST` | `/api/v1/customer/upload-avatar` | Upload profile picture |
+### Company (Super Admin) — `/api/v1/companies`
 
-### Company Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/companies/register` | — | Register new company (`role: "super_admin"`) |
+| `POST` | `/companies/login` | — | Login via email or username |
+| `POST` | `/companies/logout` | `access_token` | Logout & clear cookies |
+| `POST` | `/companies/refresh_access_token` | `refresh_token` | Get new token pair |
+| `POST` | `/companies/change_password` | — | Change password |
+| `GET` | `/companies/current_user` | `access_token` | Get profile |
+| `PATCH` | `/companies/update_account_details` | `access_token` | Update name & email |
+| `PATCH` | `/companies/update_avatar` | `access_token` | Upload avatar (multipart) |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/company/register` | Register new company |
-| `POST` | `/api/v1/company/login` | Company login |
+### Customer — `/api/v1/customers`
 
-### Admin Endpoints
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/customers/register` | — | Register (`role: "customer"`, requires `driving_license_number`) |
+| `POST` | `/customers/login` | — | Login |
+| `POST` | `/customers/logout` | `access_token` | Logout |
+| `GET` | `/customers/current_user` | `access_token` | Get profile |
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/regional-admin/register` | Register admin |
-| `POST` | `/api/v1/regional-admin/login` | Admin login |
+### Transporter — `/api/v1/transporters`
 
-**For complete API documentation, see [AUTH_API_REFERENCE.md](docs/AUTH_API_REFERENCE.md)**
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/transporters/register` | — | Register (`role: "transporter"`, requires `driving_license_number`) |
+| `POST` | `/transporters/login` | — | Login |
+
+### Staff — `/api/v1/staff`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/staff/register` | — | Register (password auto-generated & emailed, requires `addhar_card_number`) |
+| `POST` | `/staff/login` | — | Login |
+
+### Regional Admin — `/api/v1/regional_admins`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| `POST` | `/regional_admins/register` | — | Register (password auto-generated & emailed, requires `addhar_card_number`) |
+| `POST` | `/regional_admins/login` | — | Login |
+
+> **All 5 user types** share the same 8 endpoints (register, login, logout, refresh, change_password, current_user, update_account_details, update_avatar). See [full cheat sheet](docs/ENDPOINTS_CHEATSHEET.md).
 
 ---
 
@@ -603,14 +622,13 @@ Password: admin123
 
 ## 📚 Documentation
 
-### Core Documentation
+### Auth & Integration Documentation
 
 | Document | Description |
 |----------|-------------|
-| [AUTH_API_REFERENCE.md](docs/AUTH_API_REFERENCE.md) | 🔐 **Complete Authentication API documentation** |
-| [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) | 🔗 **Integration guide with code examples** |
-| [API_REFERENCE.md](docs/API_REFERENCE.md) | 📡 Recommendation API documentation |
-| [FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md) | 💻 Frontend developer guide |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | 📡 **Complete Auth API reference** — every endpoint, request/response samples, error codes |
+| [ENDPOINTS_CHEATSHEET.md](docs/ENDPOINTS_CHEATSHEET.md) | 📋 **One-page endpoint cheat sheet** — quick copy-paste reference |
+| [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) | 🚀 **Frontend & mobile integration guide** — React, React Native, Flutter examples |
 
 ### Technical Documentation
 
@@ -618,7 +636,6 @@ Password: admin123
 |----------|-------------|
 | [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 🔧 Technical implementation details |
 | [WORKFLOW.md](docs/WORKFLOW.md) | 📊 Data flow & sequence diagrams |
-| [INTEGRATION.md](docs/INTEGRATION.md) | 🔌 Backend integration guide |
 | [openspec.yml](openspec.yml) | 📝 OpenAPI 3.0 specification |
 
 ---

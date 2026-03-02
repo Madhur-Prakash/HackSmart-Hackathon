@@ -1,810 +1,579 @@
-# 🔗 Integration Guide
+# 🚀 Frontend / Mobile App Integration Guide
 
-Complete guide for integrating with the NavSwap EV Charging Platform.
-
----
-
-## 📋 Table of Contents
-
-- [Overview](#overview)
-- [Getting Started](#getting-started)
-- [Authentication Flow](#authentication-flow)
-- [Integration Patterns](#integration-patterns)
-- [Frontend Integration](#frontend-integration)
-- [Mobile App Integration](#mobile-app-integration)
-- [Backend Integration](#backend-integration)
-- [Webhooks](#webhooks)
-- [Testing](#testing)
-- [Production Checklist](#production-checklist)
+> Step-by-step guide to connect your frontend or mobile app to the NavSwap backend.
 
 ---
 
-## Overview
+## 📑 Table of Contents
 
-The NavSwap platform provides two main integration points:
-
-1. **Authentication API** - User management and authentication
-2. **Recommendation API** - EV charging station recommendations (coming soon)
-
----
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ or Python 3.9+
-- API credentials (contact support@navswap.com)
-- Basic understanding of REST APIs and JWT
-
-### Quick Start
-
-1. **Get API Access**
-   ```bash
-   # Contact support to get your API credentials
-   # You'll receive:
-   # - Base URL
-   # - API Key (if applicable)
-   # - Environment (dev/staging/prod)
-   ```
-
-2. **Install SDK** (Optional)
-   ```bash
-   # JavaScript
-   npm install @navswap/sdk
-   
-   # Python
-   pip install navswap-sdk
-   ```
-
-3. **Test Connection**
-   ```bash
-   curl http://localhost:8000/api/v1/healthcheck
-   ```
+- [Getting Started](#-getting-started)
+- [Base URL](#-base-url)
+- [Authentication Flow](#-authentication-flow)
+- [Storing Tokens](#-storing-tokens)
+- [Making Authenticated Requests](#-making-authenticated-requests)
+- [Token Refresh Flow](#-token-refresh-flow)
+- [File Upload (Avatar)](#-file-upload-avatar)
+- [Error Handling](#-error-handling)
+- [Code Examples](#-code-examples)
+  - [React / Next.js](#reactnextjs)
+  - [React Native / Expo](#react-nativeexpo)
+  - [Flutter / Dart](#flutterdart)
 
 ---
 
-## Authentication Flow
+## 🏁 Getting Started
 
-### 1. Registration Flow
+1. Ensure the backend server is running on `http://localhost:8000`
+2. All API routes are prefixed with `/api/v1`
+3. Responses follow a consistent JSON format (see [API Reference](./API_REFERENCE.md))
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant Database
-    participant Email
+---
 
-    Client->>API: POST /customer/register
-    API->>Database: Check if user exists
-    Database-->>API: User not found
-    API->>Database: Create user
-    API->>Email: Send welcome email
-    API-->>Client: Return tokens + user data
-    Client->>Client: Store tokens securely
+## 🌐 Base URL
+
+```
+Development:  http://localhost:8000/api/v1
+Production:   https://your-domain.com/api/v1
 ```
 
-**Implementation:**
+---
+
+## 🔐 Authentication Flow
+
+### Registration → Login → Use App → Refresh → Logout
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        AUTH FLOW DIAGRAM                              │
+│                                                                       │
+│   1. POST /register                                                   │
+│       ↓ Returns: { user, access_token, refresh_token }               │
+│       ↓ Sets cookies: access_token, refresh_token                    │
+│                                                                       │
+│   2. Use access_token for all protected endpoints                     │
+│       GET  /current_user  (Header: Authorization: Bearer <token>)    │
+│       POST /logout                                                    │
+│       PATCH /update_account_details                                   │
+│       PATCH /update_avatar                                            │
+│                                                                       │
+│   3. When access_token expires → 401 error                           │
+│       POST /refresh_access_token  (send refresh_token)               │
+│       ↓ Returns new { access_token, refresh_token }                  │
+│                                                                       │
+│   4. POST /logout                                                     │
+│       ↓ Clears cookies, removes refresh_token from DB                │
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 💾 Storing Tokens
+
+### Web (React / Next.js)
+
+Tokens are automatically stored as **httpOnly cookies** by the browser. For SPAs that need to send tokens via headers:
 
 ```javascript
-// Step 1: Register user
-const registerUser = async (userData) => {
-  try {
-    const response = await fetch('http://localhost:8000/api/v1/customer/register', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include', // Important for cookies
-      body: JSON.stringify(userData)
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      // Store access token
-      localStorage.setItem('access_token', data.data.access_token);
-      // Refresh token is stored in HTTP-only cookie automatically
-      return data.data.user;
-    } else {
-      throw new Error(data.message);
-    }
-  } catch (error) {
-    console.error('Registration failed:', error);
-    throw error;
-  }
-};
+// Store in memory (most secure for SPAs)
+let accessToken = null;
+let refreshToken = null;
 
-// Usage
-const newUser = await registerUser({
-  full_name: 'Alice Smith',
-  email: 'alice@example.com',
-  password: 'SecurePass123!',
-  phone_number: '5551234567',
-  addhar_card_number: '555123456789',
-  country_code: '+1',
-  role: 'customer',
-  vehicle_type: 'Tesla Model 3',
-  vehicle_number: 'CA-1234'
-});
-```
-
----
-
-### 2. Login Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant Database
-
-    Client->>API: POST /customer/login
-    API->>Database: Verify credentials
-    Database-->>API: User found
-    API->>API: Generate tokens
-    API-->>Client: Return tokens + user data
-    Client->>Client: Store tokens
-```
-
-**Implementation:**
-
-```javascript
-const loginUser = async (email, password) => {
-  try {
-    const response = await fetch('http://localhost:8000/api/v1/customer/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      credentials: 'include',
-      body: JSON.stringify({ email, password })
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      localStorage.setItem('access_token', data.data.access_token);
-      return data.data.user;
-    } else {
-      throw new Error(data.message);
-    }
-  } catch (error) {
-    console.error('Login failed:', error);
-    throw error;
-  }
-};
-```
-
----
-
-### 3. Token Refresh Flow
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant API
-    participant Database
-
-    Client->>API: POST /customer/refresh-token (with refresh token cookie)
-    API->>Database: Verify refresh token
-    Database-->>API: Token valid
-    API->>API: Generate new tokens
-    API-->>Client: Return new tokens
-    Client->>Client: Update stored tokens
-```
-
-**Implementation:**
-
-```javascript
-const refreshAccessToken = async () => {
-  try {
-    const response = await fetch('http://localhost:8000/api/v1/customer/refresh-token', {
-      method: 'POST',
-      credentials: 'include' // Sends refresh token cookie
-    });
-    
-    const data = await response.json();
-    
-    if (data.success) {
-      localStorage.setItem('access_token', data.data.access_token);
-      return data.data.access_token;
-    } else {
-      // Refresh token expired, redirect to login
-      window.location.href = '/login';
-    }
-  } catch (error) {
-    console.error('Token refresh failed:', error);
-    window.location.href = '/login';
-  }
-};
-
-// Auto-refresh before token expires
-setInterval(refreshAccessToken, 14 * 60 * 1000); // Refresh every 14 minutes
-```
-
----
-
-### 4. Authenticated Requests
-
-```javascript
-const makeAuthenticatedRequest = async (url, options = {}) => {
-  const accessToken = localStorage.getItem('access_token');
-  
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...options.headers,
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json'
-    },
-    credentials: 'include'
-  });
-  
-  // Handle 401 Unauthorized
-  if (response.status === 401) {
-    // Try to refresh token
-    await refreshAccessToken();
-    // Retry request
-    return makeAuthenticatedRequest(url, options);
-  }
-  
-  return response.json();
-};
-
-// Usage
-const user = await makeAuthenticatedRequest('http://localhost:8000/api/v1/customer/current-user');
-```
-
----
-
-## Integration Patterns
-
-### Pattern 1: API Wrapper Class
-
-```javascript
-class NavSwapAPI {
-  constructor(baseURL = 'http://localhost:8000/api/v1') {
-    this.baseURL = baseURL;
-    this.accessToken = localStorage.getItem('access_token');
-  }
-  
-  async request(endpoint, options = {}) {
-    const url = `${this.baseURL}${endpoint}`;
-    const config = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
-      credentials: 'include'
-    };
-    
-    if (this.accessToken) {
-      config.headers['Authorization'] = `Bearer ${this.accessToken}`;
-    }
-    
-    const response = await fetch(url, config);
-    
-    if (response.status === 401) {
-      await this.refreshToken();
-      return this.request(endpoint, options);
-    }
-    
-    return response.json();
-  }
-  
-  async register(userData) {
-    const data = await this.request('/customer/register', {
-      method: 'POST',
-      body: JSON.stringify(userData)
-    });
-    
-    if (data.success) {
-      this.setToken(data.data.access_token);
-    }
-    
-    return data;
-  }
-  
-  async login(email, password) {
-    const data = await this.request('/customer/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (data.success) {
-      this.setToken(data.data.access_token);
-    }
-    
-    return data;
-  }
-  
-  async logout() {
-    const data = await this.request('/customer/logout', {
-      method: 'POST'
-    });
-    
-    this.clearToken();
-    return data;
-  }
-  
-  async getCurrentUser() {
-    return this.request('/customer/current-user');
-  }
-  
-  async updateProfile(updates) {
-    return this.request('/customer/update-profile', {
-      method: 'PATCH',
-      body: JSON.stringify(updates)
-    });
-  }
-  
-  async refreshToken() {
-    const data = await this.request('/customer/refresh-token', {
-      method: 'POST'
-    });
-    
-    if (data.success) {
-      this.setToken(data.data.access_token);
-    }
-    
-    return data;
-  }
-  
-  setToken(token) {
-    this.accessToken = token;
-    localStorage.setItem('access_token', token);
-  }
-  
-  clearToken() {
-    this.accessToken = null;
-    localStorage.removeItem('access_token');
-  }
+function setTokens(access, refresh) {
+  accessToken = access;
+  refreshToken = refresh;
 }
 
-// Usage
-const api = new NavSwapAPI();
+function getAccessToken() {
+  return accessToken;
+}
+```
 
-// Register
-await api.register({
-  full_name: 'Alice Smith',
-  email: 'alice@example.com',
-  password: 'SecurePass123!',
-  phone_number: '5551234567',
-  addhar_card_number: '555123456789',
-  country_code: '+1',
-  role: 'customer'
-});
+> **⚠️ Warning:** Never store tokens in `localStorage` — they are vulnerable to XSS attacks. Use httpOnly cookies or in-memory storage.
 
-// Login
-await api.login('alice@example.com', 'SecurePass123!');
+### Mobile (React Native / Flutter)
 
-// Get current user
-const user = await api.getCurrentUser();
+Use secure storage:
 
-// Update profile
-await api.updateProfile({
-  vehicle_type: 'Tesla Model Y'
-});
+```javascript
+// React Native — use react-native-keychain or expo-secure-store
+import * as SecureStore from 'expo-secure-store';
 
-// Logout
-await api.logout();
+await SecureStore.setItemAsync('access_token', token);
+const token = await SecureStore.getItemAsync('access_token');
+```
+
+```dart
+// Flutter — use flutter_secure_storage
+final storage = FlutterSecureStorage();
+await storage.write(key: 'access_token', value: token);
+String? token = await storage.read(key: 'access_token');
 ```
 
 ---
 
-### Pattern 2: React Hooks
+## 📡 Making Authenticated Requests
+
+### JavaScript (Fetch)
 
 ```javascript
-// useAuth.js
+const API_BASE = 'http://localhost:8000/api/v1';
+
+// Helper function for authenticated requests
+async function apiRequest(endpoint, options = {}) {
+  const token = getAccessToken();
+  
+  const config = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...options.headers,
+    },
+  };
+
+  const response = await fetch(`${API_BASE}${endpoint}`, config);
+  const data = await response.json();
+
+  // Auto-refresh on 401
+  if (response.status === 401 && data.message !== 'Invalid password') {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      // Retry the original request with new token
+      config.headers['Authorization'] = `Bearer ${getAccessToken()}`;
+      const retryResponse = await fetch(`${API_BASE}${endpoint}`, config);
+      return retryResponse.json();
+    }
+  }
+
+  return data;
+}
+```
+
+### Axios (with interceptors)
+
+```javascript
+import axios from 'axios';
+
+const api = axios.create({
+  baseURL: 'http://localhost:8000/api/v1',
+  withCredentials: true, // sends cookies automatically
+});
+
+// Request interceptor — attach token
+api.interceptors.request.use((config) => {
+  const token = getAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Response interceptor — auto-refresh on 401
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        const { data } = await api.post('/companies/refresh_access_token');
+        setTokens(data.data.access_token, data.data.refresh_token);
+        originalRequest.headers.Authorization = `Bearer ${data.data.access_token}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Redirect to login
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+---
+
+## 🔄 Token Refresh Flow
+
+When the `access_token` expires, you'll get a `401` response. Use the refresh token to get new tokens:
+
+```javascript
+async function refreshAccessToken() {
+  try {
+    const response = await fetch(`${API_BASE}/companies/refresh_access_token`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${getRefreshToken()}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) throw new Error('Refresh failed');
+
+    const data = await response.json();
+    setTokens(data.data.access_token, data.data.refresh_token);
+    return true;
+  } catch (error) {
+    // Both tokens expired — redirect to login
+    clearTokens();
+    return false;
+  }
+}
+```
+
+> **Note:** Use the correct base path for refresh based on user role:
+> - Company: `/api/v1/companies/refresh_access_token`
+> - Customer: `/api/v1/customers/refresh_access_token`
+> - Transporter: `/api/v1/transporters/refresh_access_token`
+> - Staff: `/api/v1/staff/refresh_access_token`
+> - Regional Admin: `/api/v1/regional_admins/refresh_access_token`
+
+---
+
+## 📁 File Upload (Avatar)
+
+Avatar upload uses `multipart/form-data`. Do **not** set `Content-Type` manually — the browser/client sets the boundary automatically.
+
+### JavaScript
+
+```javascript
+async function uploadAvatar(file) {
+  const formData = new FormData();
+  formData.append('avatar', file); // key MUST be "avatar"
+
+  const response = await fetch(`${API_BASE}/companies/update_avatar`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${getAccessToken()}`,
+      // Do NOT set Content-Type here
+    },
+    body: formData,
+  });
+
+  return response.json();
+}
+```
+
+### React Native (Expo)
+
+```javascript
+import * as ImagePicker from 'expo-image-picker';
+
+async function pickAndUploadAvatar() {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    const uri = result.assets[0].uri;
+    const formData = new FormData();
+    formData.append('avatar', {
+      uri,
+      name: 'avatar.jpg',
+      type: 'image/jpeg',
+    });
+
+    const response = await fetch(`${API_BASE}/customers/update_avatar`, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return response.json();
+  }
+}
+```
+
+### Flutter / Dart
+
+```dart
+import 'package:http/http.dart' as http;
+
+Future<void> uploadAvatar(String filePath, String token) async {
+  var request = http.MultipartRequest(
+    'PATCH',
+    Uri.parse('http://localhost:8000/api/v1/customers/update_avatar'),
+  );
+  
+  request.headers['Authorization'] = 'Bearer $token';
+  request.files.add(await http.MultipartFile.fromPath('avatar', filePath));
+  
+  var response = await request.send();
+  var responseBody = await response.stream.bytesToString();
+  print(responseBody);
+}
+```
+
+---
+
+## ⚠️ Error Handling
+
+All errors follow a consistent format:
+
+```json
+{
+  "status_code": 400,
+  "message": "All fields are required",
+  "data": null,
+  "success": false,
+  "errors": []
+}
+```
+
+### Recommended error handler:
+
+```javascript
+function handleApiError(response) {
+  switch (response.status_code) {
+    case 400:
+      // Show validation error to user
+      showToast(response.message);
+      break;
+    case 401:
+      // Token expired or invalid — trigger refresh or redirect to login
+      handleUnauthorized();
+      break;
+    case 404:
+      // Resource not found
+      showToast('Not found');
+      break;
+    case 409:
+      // Conflict (e.g., email already exists)
+      showToast(response.message);
+      break;
+    case 500:
+      // Server error
+      showToast('Something went wrong. Please try again.');
+      break;
+    default:
+      showToast(response.message || 'Unknown error');
+  }
+}
+```
+
+---
+
+## 💻 Code Examples
+
+### React/Next.js
+
+**Complete Auth Context:**
+
+```jsx
+// contexts/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from 'react';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [tokens, setTokens] = useState({ access: null, refresh: null });
   const [loading, setLoading] = useState(true);
-  const api = new NavSwapAPI();
-  
-  useEffect(() => {
-    // Check if user is logged in on mount
-    const checkAuth = async () => {
-      try {
-        const data = await api.getCurrentUser();
-        if (data.success) {
-          setUser(data.data.user);
-        }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkAuth();
-  }, []);
-  
-  const register = async (userData) => {
-    const data = await api.register(userData);
+
+  const API = 'http://localhost:8000/api/v1';
+
+  async function register(userData, role = 'customer') {
+    const basePath = role === 'customer' ? 'customers' : 'companies';
+    const res = await fetch(`${API}/${basePath}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
     if (data.success) {
       setUser(data.data.user);
+      setTokens({ access: data.data.access_token, refresh: data.data.refresh_token });
     }
     return data;
-  };
-  
-  const login = async (email, password) => {
-    const data = await api.login(email, password);
+  }
+
+  async function login(credentials, role = 'customer') {
+    const basePath = role === 'customer' ? 'customers' : 'companies';
+    const res = await fetch(`${API}/${basePath}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(credentials),
+    });
+    const data = await res.json();
     if (data.success) {
       setUser(data.data.user);
+      setTokens({ access: data.data.access_token, refresh: data.data.refresh_token });
     }
     return data;
-  };
-  
-  const logout = async () => {
-    await api.logout();
+  }
+
+  async function logout() {
+    await fetch(`${API}/companies/logout`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${tokens.access}` },
+      credentials: 'include',
+    });
     setUser(null);
-  };
-  
-  const updateProfile = async (updates) => {
-    const data = await api.updateProfile(updates);
-    if (data.success) {
-      setUser(data.data.user);
-    }
+    setTokens({ access: null, refresh: null });
+  }
+
+  async function fetchCurrentUser(role = 'customer') {
+    const basePath = role === 'customer' ? 'customers' : 'companies';
+    const res = await fetch(`${API}/${basePath}/current_user`, {
+      headers: { 'Authorization': `Bearer ${tokens.access}` },
+      credentials: 'include',
+    });
+    const data = await res.json();
+    if (data.success) setUser(data.data.user);
+    setLoading(false);
     return data;
-  };
-  
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, register, login, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, tokens, loading, register, login, logout, fetchCurrentUser }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
-  }
-  return context;
-};
-
-// Usage in components
-function LoginPage() {
-  const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await login(email, password);
-      // Redirect to dashboard
-    } catch (error) {
-      alert('Login failed: ' + error.message);
-    }
-  };
-  
-  return (
-    <form onSubmit={handleSubmit}>
-      <input value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button type="submit">Login</button>
-    </form>
-  );
 }
 
-function Dashboard() {
-  const { user, logout } = useAuth();
-  
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  
-  return (
-    <div>
-      <h1>Welcome, {user.full_name}!</h1>
-      <button onClick={logout}>Logout</button>
-    </div>
-  );
-}
+export const useAuth = () => useContext(AuthContext);
 ```
 
----
-
-## Frontend Integration
-
-### React Example
-
-```jsx
-// App.js
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import Dashboard from './pages/Dashboard';
-import ProtectedRoute from './components/ProtectedRoute';
-
-function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard />
-              </ProtectedRoute>
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
-}
-
-// ProtectedRoute.js
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
-
-function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-  
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-  
-  return children;
-}
-```
-
----
-
-## Mobile App Integration
-
-### React Native Example
+### React Native/Expo
 
 ```javascript
-// api/navswap.js
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// services/api.js
+import * as SecureStore from 'expo-secure-store';
 
-class NavSwapAPI {
-  constructor() {
-    this.baseURL = 'http://localhost:8000/api/v1';
+const API_BASE = 'http://YOUR_IP:8000/api/v1';
+
+export async function registerCustomer(data) {
+  const res = await fetch(`${API_BASE}/customers/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      full_name: data.fullName,
+      email: data.email,
+      phone_number: data.phone,
+      country_code: '+91',
+      role: 'customer',
+      driving_license_number: data.license,
+      password: data.password,
+    }),
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    await SecureStore.setItemAsync('access_token', result.data.access_token);
+    await SecureStore.setItemAsync('refresh_token', result.data.refresh_token);
   }
-  
-  async getToken() {
-    return await AsyncStorage.getItem('access_token');
+  return result;
+}
+
+export async function loginCustomer(email, password) {
+  const res = await fetch(`${API_BASE}/customers/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+
+  const result = await res.json();
+  if (result.success) {
+    await SecureStore.setItemAsync('access_token', result.data.access_token);
+    await SecureStore.setItemAsync('refresh_token', result.data.refresh_token);
   }
-  
-  async setToken(token) {
-    await AsyncStorage.setItem('access_token', token);
-  }
-  
-  async clearToken() {
-    await AsyncStorage.removeItem('access_token');
-  }
-  
-  async request(endpoint, options = {}) {
-    const token = await this.getToken();
-    const url = `${this.baseURL}${endpoint}`;
-    
-    const config = {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      }
-    };
-    
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+  return result;
+}
+
+export async function getCurrentUser() {
+  const token = await SecureStore.getItemAsync('access_token');
+  const res = await fetch(`${API_BASE}/customers/current_user`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+  return res.json();
+}
+```
+
+### Flutter/Dart
+
+```dart
+// lib/services/auth_service.dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class AuthService {
+  static const String baseUrl = 'http://YOUR_IP:8000/api/v1';
+  final storage = const FlutterSecureStorage();
+
+  Future<Map<String, dynamic>> registerCustomer({
+    required String fullName,
+    required String email,
+    required String phone,
+    required String license,
+    required String password,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/customers/register'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'full_name': fullName,
+        'email': email,
+        'phone_number': phone,
+        'country_code': '+91',
+        'role': 'customer',
+        'driving_license_number': license,
+        'password': password,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      await storage.write(key: 'access_token', value: data['data']['access_token']);
+      await storage.write(key: 'refresh_token', value: data['data']['refresh_token']);
     }
-    
-    const response = await fetch(url, config);
-    return response.json();
-  }
-  
-  async login(email, password) {
-    const data = await this.request('/customer/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password })
-    });
-    
-    if (data.success) {
-      await this.setToken(data.data.access_token);
-    }
-    
     return data;
   }
-}
 
-export default new NavSwapAPI();
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/customers/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'email': email, 'password': password}),
+    );
 
-// Usage in component
-import React, { useState } from 'react';
-import { View, TextInput, Button, Alert } from 'react-native';
-import api from './api/navswap';
-
-function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  
-  const handleLogin = async () => {
-    try {
-      const data = await api.login(email, password);
-      if (data.success) {
-        navigation.navigate('Dashboard');
-      } else {
-        Alert.alert('Error', data.message);
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Login failed');
+    final data = jsonDecode(response.body);
+    if (data['success'] == true) {
+      await storage.write(key: 'access_token', value: data['data']['access_token']);
+      await storage.write(key: 'refresh_token', value: data['data']['refresh_token']);
     }
-  };
-  
-  return (
-    <View>
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-      />
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
-      <Button title="Login" onPress={handleLogin} />
-    </View>
-  );
-}
-```
-
----
-
-## Backend Integration
-
-### Node.js/Express Middleware
-
-```javascript
-// middleware/auth.js
-const jwt = require('jsonwebtoken');
-
-const verifyToken = async (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'No token provided'
-      });
-    }
-    
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid token'
-    });
+    return data;
   }
-};
 
-// Usage
-app.get('/api/protected', verifyToken, (req, res) => {
-  res.json({
-    success: true,
-    data: {
-      user: req.user
-    }
-  });
-});
+  Future<Map<String, dynamic>> getCurrentUser() async {
+    final token = await storage.read(key: 'access_token');
+    final response = await http.get(
+      Uri.parse('$baseUrl/customers/current_user'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return jsonDecode(response.body);
+  }
+}
 ```
 
 ---
 
-## Webhooks
+## 🔗 Related Documentation
 
-### Coming Soon
-
-Webhook support for real-time events:
-- User registration
-- Profile updates
-- Station bookings
-- Payment events
+- [API Reference (full)](./API_REFERENCE.md)
+- [Endpoint Cheat Sheet](./ENDPOINTS_CHEATSHEET.md)
+- [Main Project README](../README.md)
 
 ---
 
-## Testing
-
-### Unit Tests
-
-```javascript
-// __tests__/api.test.js
-import NavSwapAPI from '../api/navswap';
-
-describe('NavSwapAPI', () => {
-  let api;
-  
-  beforeEach(() => {
-    api = new NavSwapAPI();
-  });
-  
-  test('should register user', async () => {
-    const userData = {
-      full_name: 'Test User',
-      email: 'test@example.com',
-      password: 'TestPass123!',
-      phone_number: '1234567890',
-      addhar_card_number: '123456789012',
-      country_code: '+1',
-      role: 'customer'
-    };
-    
-    const data = await api.register(userData);
-    expect(data.success).toBe(true);
-    expect(data.data.user.email).toBe(userData.email);
-  });
-  
-  test('should login user', async () => {
-    const data = await api.login('test@example.com', 'TestPass123!');
-    expect(data.success).toBe(true);
-    expect(data.data.access_token).toBeDefined();
-  });
-});
-```
-
----
-
-## Production Checklist
-
-### Security
-- [ ] Use HTTPS for all API calls
-- [ ] Store tokens securely (HTTP-only cookies or secure storage)
-- [ ] Implement CSRF protection
-- [ ] Validate all user inputs
-- [ ] Use environment variables for sensitive data
-- [ ] Enable rate limiting
-- [ ] Implement request signing (optional)
-
-### Performance
-- [ ] Implement token refresh logic
-- [ ] Cache user data appropriately
-- [ ] Handle network errors gracefully
-- [ ] Implement retry logic for failed requests
-- [ ] Use connection pooling
-
-### Monitoring
-- [ ] Log all API errors
-- [ ] Track API response times
-- [ ] Monitor token refresh rates
-- [ ] Set up alerts for failures
-
-### User Experience
-- [ ] Show loading states
-- [ ] Display clear error messages
-- [ ] Implement offline support
-- [ ] Add session timeout warnings
-- [ ] Provide logout functionality
-
----
-
-## Support
-
-Need help integrating?
-
-- 📧 Email: support@navswap.com
-- 📚 Documentation: https://docs.navswap.com
-- 💬 Discord: https://discord.gg/navswap
-- 🐛 Issues: https://github.com/navswap/issues
+_Last updated: March 2, 2026_
