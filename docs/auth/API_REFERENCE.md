@@ -1096,7 +1096,7 @@ EMAIL_PASSWORD=your_gmail_app_password
 
 ## 🔗 Related Documentation
 
-- [Main Project README](../README.md) — Project overview, architecture, quick start
+- [Main Project README](../../README.md) — Project overview, architecture, quick start
 - [Quick Start & Integration Guide](./INTEGRATION_GUIDE.md) — Step-by-step frontend integration
 - [Endpoint Summary (Cheat Sheet)](./ENDPOINTS_CHEATSHEET.md) — One-page endpoint list
 

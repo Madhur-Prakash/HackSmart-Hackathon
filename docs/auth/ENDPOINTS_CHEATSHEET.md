@@ -128,7 +128,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 - [Full API Reference](./API_REFERENCE.md)
 - [Integration Guide](./INTEGRATION_GUIDE.md)
-- [Main README](../README.md)
+- [Main README](../../README.md)
 
 ---
 

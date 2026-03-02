@@ -208,7 +208,7 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 
 ## 📡 API Reference — Authentication (Port 8000)
 
-> **📖 Full documentation:** [API Reference](docs/API_REFERENCE.md) | [Endpoint Cheat Sheet](docs/ENDPOINTS_CHEATSHEET.md) | [Integration Guide](docs/INTEGRATION_GUIDE.md)
+> **📖 Full documentation:** [API Reference](docs/auth/API_REFERENCE.md) | [Endpoint Cheat Sheet](docs/auth/ENDPOINTS_CHEATSHEET.md) | [Integration Guide](docs/auth/INTEGRATION_GUIDE.md)
 
 ### Company (Super Admin) — `/api/v1/companies`
 
@@ -253,7 +253,7 @@ curl "http://localhost:3000/recommend?userId=test&lat=37.7749&lon=-122.4194"
 | `POST` | `/regional_admins/register` | — | Register (password auto-generated & emailed, requires `addhar_card_number`) |
 | `POST` | `/regional_admins/login` | — | Login |
 
-> **All 5 user types** share the same 8 endpoints (register, login, logout, refresh, change_password, current_user, update_account_details, update_avatar). See [full cheat sheet](docs/ENDPOINTS_CHEATSHEET.md).
+> **All 5 user types** share the same 8 endpoints (register, login, logout, refresh, change_password, current_user, update_account_details, update_avatar). See [full cheat sheet](docs/auth/ENDPOINTS_CHEATSHEET.md).
 
 ---
 
@@ -626,9 +626,9 @@ Password: admin123
 
 | Document | Description |
 |----------|-------------|
-| [API_REFERENCE.md](docs/API_REFERENCE.md) | 📡 **Complete Auth API reference** — every endpoint, request/response samples, error codes |
-| [ENDPOINTS_CHEATSHEET.md](docs/ENDPOINTS_CHEATSHEET.md) | 📋 **One-page endpoint cheat sheet** — quick copy-paste reference |
-| [INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) | 🚀 **Frontend & mobile integration guide** — React, React Native, Flutter examples |
+| [API_REFERENCE.md](docs/auth/API_REFERENCE.md) | 📡 **Complete Auth API reference** — every endpoint, request/response samples, error codes |
+| [ENDPOINTS_CHEATSHEET.md](docs/auth/ENDPOINTS_CHEATSHEET.md) | 📋 **One-page endpoint cheat sheet** — quick copy-paste reference |
+| [INTEGRATION_GUIDE.md](docs/auth/INTEGRATION_GUIDE.md) | 🚀 **Frontend & mobile integration guide** — React, React Native, Flutter examples |
 
 ### Technical Documentation
 

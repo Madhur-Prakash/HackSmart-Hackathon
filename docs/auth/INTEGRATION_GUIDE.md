@@ -572,7 +572,7 @@ class AuthService {
 
 - [API Reference (full)](./API_REFERENCE.md)
 - [Endpoint Cheat Sheet](./ENDPOINTS_CHEATSHEET.md)
-- [Main Project README](../README.md)
+- [Main Project README](../../README.md)
 
 ---
 
