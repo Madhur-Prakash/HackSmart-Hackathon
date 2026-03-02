@@ -630,14 +630,6 @@ Password: admin123
 | [ENDPOINTS_CHEATSHEET.md](docs/auth/ENDPOINTS_CHEATSHEET.md) | 📋 **One-page endpoint cheat sheet** — quick copy-paste reference |
 | [INTEGRATION_GUIDE.md](docs/auth/INTEGRATION_GUIDE.md) | 🚀 **Frontend & mobile integration guide** — React, React Native, Flutter examples |
 
-### Technical Documentation
-
-| Document | Description |
-|----------|-------------|
-| [IMPLEMENTATION.md](docs/IMPLEMENTATION.md) | 🔧 Technical implementation details |
-| [WORKFLOW.md](docs/WORKFLOW.md) | 📊 Data flow & sequence diagrams |
-| [openspec.yml](openspec.yml) | 📝 OpenAPI 3.0 specification |
-
 ---
 
 ## 🐛 Troubleshooting
