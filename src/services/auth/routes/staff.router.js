@@ -8,8 +8,8 @@ import {
     updateAccountDetails,  
     updateUserAvatar,
     changeCurrentPassword,} from "../controllers/staff.controller.js";
-import {upload} from "../middlewares/multer.middleware.js"
-import { JWTVerify } from "../middlewares/auth.middleware.js";
+import {upload} from "../../../middlewares/multer.middleware.js"
+import { StaffJWTVerify } from "../../../middlewares/auth.middleware.js";
 
 const router = Router()
 
@@ -23,9 +23,9 @@ router.route("/change_password").post(changeCurrentPassword)
 
 
 // secure routes
-router.route("/logout").post(JWTVerify, logoutUser)
-router.route("/current_user").get(JWTVerify, getCurrentUser)
-router.route("/update_account_details").patch(JWTVerify, updateAccountDetails)
-router.route("/update_avatar").patch(JWTVerify, upload.single("avatar"), updateUserAvatar)
+router.route("/logout").post(StaffJWTVerify, logoutUser)
+router.route("/current_user").get(StaffJWTVerify, getCurrentUser)
+router.route("/update_account_details").patch(StaffJWTVerify, updateAccountDetails)
+router.route("/update_avatar").patch(StaffJWTVerify, upload.single("avatar"), updateUserAvatar)
 
 export default router

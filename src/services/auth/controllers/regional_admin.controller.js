@@ -1,13 +1,12 @@
-import { ApiError } from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../../../utils/ApiError.js";
+import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../constants.js";
-import {Staff} from "../models/staff.model.js"
-import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect, sendEmail } from "../utils/helper.js";
-
+import {RegionalAdmin} from "../models/regional_admin.model.js"
+import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
+import { ApiResponse } from "../../../utils/ApiResponse.js";
+import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
 
 const registerUser = asyncHandler( async (req, res) => {
     const {full_name, email, phone_number, addhar_card_number, country_code, role} = req.body
@@ -15,18 +14,18 @@ const registerUser = asyncHandler( async (req, res) => {
     if([full_name, email, phone_number, addhar_card_number, country_code, role].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
-    if (role !== "staff"){
+    if (role !== "regional_admin"){
         throw new ApiError(400, "Invalid role")
     }
     if(!email.includes("@")){
         throw new ApiError(400, "Email is not valid")
     }
     let user_name;
-    const existing_user = await Staff.findOne({"email": email})
+    const existing_user = await RegionalAdmin.findOne({"email": email})
     // console.log("user:",existing_user);
     
     if (existing_user){
-        throw new ApiError(409, "Staff already exists with this email")
+        throw new ApiError(409, "RegionalAdmin already exists with this email")
     }
 
     try {
@@ -46,7 +45,7 @@ const registerUser = asyncHandler( async (req, res) => {
     const hashed_password = await bcrypt.hash(password, salt) // hash the password
 
     //  insert in db
-    const new_user = await Staff.create({
+    const new_user = await RegionalAdmin.create({
         full_name: full_name,
         user_name: user_name,
         email: email,
@@ -57,7 +56,7 @@ const registerUser = asyncHandler( async (req, res) => {
         password: hashed_password
     })
     if(!new_user){
-        throw new ApiError(500, "Staff registration failed")
+        throw new ApiError(500, "RegionalAdmin registration failed")
     }
 
     // Remove password before sending response
@@ -106,7 +105,7 @@ const registerUser = asyncHandler( async (req, res) => {
                 user: user_data, 
                 access_token: access_token, 
                 refresh_token: refresh_token}, 
-                "Staff registered successfully")) 
+                "RegionalAdmin registered successfully")) 
             });     
 
 
@@ -115,16 +114,16 @@ const loginUser = asyncHandler(async (req, res) => {
     console.log("email:", email);
     
     if(! (user_name || email) ){
-        throw new ApiError(400, "Staff name or email is required");
+        throw new ApiError(400, "RegionalAdmin name or email is required");
     }
     if(!password){
         throw new ApiError(400, "Password is required");
     }
 
     if (user_name){
-        const user = await Staff.findOne({user_name: user_name});
+        const user = await RegionalAdmin.findOne({user_name: user_name});
         if(!user){
-            throw new ApiError(404, "Staff not found with this user name");
+            throw new ApiError(404, "RegionalAdmin not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -155,12 +154,12 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "Staff logged in successfully"))
+                    "RegionalAdmin logged in successfully"))
                 } 
     else if (email){
-        const user = await Staff.findOne({email: email});
+        const user = await RegionalAdmin.findOne({email: email});
         if(!user){
-            throw new ApiError(404, "Staff not found with this user name");
+            throw new ApiError(404, "RegionalAdmin not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -189,7 +188,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "Staff logged in successfully"))
+                    "RegionalAdmin logged in successfully"))
                 }
         })
 
@@ -200,7 +199,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized request");
     }
 
-    await Staff.findByIdAndUpdate(
+    await RegionalAdmin.findByIdAndUpdate(
         user._id,
         {
             $unset: {
@@ -212,9 +211,9 @@ const logoutUser = asyncHandler(async (req, res) => {
         }
     )
 
-    console.log("Staff logged out successfully:", user.user_name);
+    console.log("RegionalAdmin logged out successfully:", user.user_name);
     return res.status(200).clearCookie("access_token", options).clearCookie("refresh_token", options).json(
-        new ApiResponse(200, {}, "Staff logged out successfully"))
+        new ApiResponse(200, {}, "RegionalAdmin logged out successfully"))
 })
 
 
@@ -229,10 +228,10 @@ const refresh_access_token = asyncHandler(async(req, res) => {
         const decoded_info = jwt.verify(incoming_refresh_token, process.env.REFRESH_TOKEN_SECRET)
         console.log("decoded info:", decoded_info)
         
-        const user = await Staff.findById(decoded_info?._id)
+        const user = await RegionalAdmin.findById(decoded_info?._id)
             if (!user) {
                     throw new ApiError(401, "Invalid Refresh Token")}
-            console.log("Staff found:", user.user_name);
+            console.log("RegionalAdmin found:", user.user_name);
     
             // verify the refresh tken with the one that is stored in db
             console.log("Incoming refresh token:", incoming_refresh_token);
@@ -276,13 +275,13 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     if(!(new_password || confirm_password)){
         throw new ApiError(400, "Password and confirm password are required")}
     if(! (user_name || email) ){
-        throw new ApiError(400, "Staff name or email is required");
+        throw new ApiError(400, "RegionalAdmin name or email is required");
     }
     
     if (email){
-        const existing_user = await Staff.findOne({email: email})
+        const existing_user = await RegionalAdmin.findOne({email: email})
         if(!existing_user){
-            throw new ApiError(400, "Staff dosen't exist")}
+            throw new ApiError(400, "RegionalAdmin dosen't exist")}
 
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
@@ -299,9 +298,9 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
         return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"))}
 
     else if(user_name){
-        const existing_user = await Staff.findOne({user_name: user_name})
+        const existing_user = await RegionalAdmin.findOne({user_name: user_name})
         if(!existing_user){
-            throw new ApiError(400, "Staff dosen't exist")}
+            throw new ApiError(400, "RegionalAdmin dosen't exist")}
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
         if(new_password.length < 6){
@@ -337,7 +336,7 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     user.email = email
     await user.save({validateBeforeSave: false})
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Staff details updated successfully"))})
+    return res.status(200).json(new ApiResponse(200, {user: user}, "RegionalAdmin details updated successfully"))})
 
 
 const updateUserAvatar = asyncHandler(async(req, res) => {
@@ -366,13 +365,13 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     await user.save({validateBeforeSave: false}) // save the user without validating the user schema again
 
     // alernative method to update avatar:
-    // const updated_user = await Staff.findByIdAndUpdate(
+    // const updated_user = await RegionalAdmin.findByIdAndUpdate(
     //     user?._id,
     // { $set: {avatar: avatar.url}},
     // {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Staff avatar updated successfully"))
+    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "RegionalAdmin avatar updated successfully"))
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Staff avatar updated successfully"))
+    return res.status(200).json(new ApiResponse(200, {user: user}, "RegionalAdmin avatar updated successfully"))
 })
 
 

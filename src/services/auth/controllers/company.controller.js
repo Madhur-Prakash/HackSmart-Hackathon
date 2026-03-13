@@ -1,32 +1,31 @@
-import { ApiError } from "../utils/ApiError.js";
-import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiError } from "../../../utils/ApiError.js";
+import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../constants.js";
-import {Customer} from "../models/customer.model.js"
-import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
-import { ApiResponse } from "../utils/ApiResponse.js";
-import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../utils/helper.js";
-
+import {Company} from "../models/company.models.js"
+import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
+import { ApiResponse } from "../../../utils/ApiResponse.js";
+import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
 
 const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, phone_number, country_code, role, driving_license_number, password} = req.body
+    const {full_name, email, phone_number, country_code, role, password} = req.body
 
-    if([full_name, email, phone_number, country_code, role, driving_license_number, password].some((field) => field?.trim() === "")){
+    if([full_name, email, phone_number, country_code, role, password].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
-    if (role !== "customer"){
+    if (role !== "super_admin"){
         throw new ApiError(400, "Invalid role")
     }
     if(!email.includes("@")){
         throw new ApiError(400, "Email is not valid")
     }
     let user_name;
-    const existing_user = await Customer.findOne({"email": email})
+    const existing_user = await Company.findOne({"email": email})
     // console.log("user:",existing_user);
     
     if (existing_user){
-        throw new ApiError(409, "Customer already exists with this email")
+        throw new ApiError(409, "Company already exists with this email")
     }
 
     try {
@@ -40,18 +39,17 @@ const registerUser = asyncHandler( async (req, res) => {
     }
 
     //  insert in db
-    const new_user = await Customer.create({
+    const new_user = await Company.create({
         full_name: full_name,
         user_name: user_name,
         email: email,
         phone_number: phone_number,
         country_code: country_code,
         role: role,
-        driving_license_number: driving_license_number,
         password: password
     })
     if(!new_user){
-        throw new ApiError(500, "Customer registration failed")
+        throw new ApiError(500, "Company registration failed")
     }
 
     // Remove password before sending response
@@ -86,7 +84,7 @@ const registerUser = asyncHandler( async (req, res) => {
                 user: user_data, 
                 access_token: access_token, 
                 refresh_token: refresh_token}, 
-                "Customer registered successfully")) 
+                "Company registered successfully")) 
             });     
 
 
@@ -95,16 +93,16 @@ const loginUser = asyncHandler(async (req, res) => {
     console.log("email:", email);
     
     if(! (user_name || email) ){
-        throw new ApiError(400, "Customer name or email is required");
+        throw new ApiError(400, "Company name or email is required");
     }
     if(!password){
         throw new ApiError(400, "Password is required");
     }
 
     if (user_name){
-        const user = await Customer.findOne({user_name: user_name});
+        const user = await Company.findOne({user_name: user_name});
         if(!user){
-            throw new ApiError(404, "Customer not found with this user name");
+            throw new ApiError(404, "Company not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -135,12 +133,12 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "Customer logged in successfully"))
+                    "Company logged in successfully"))
                 } 
     else if (email){
-        const user = await Customer.findOne({email: email});
+        const user = await Company.findOne({email: email});
         if(!user){
-            throw new ApiError(404, "Customer not found with this user name");
+            throw new ApiError(404, "Company not found with this user name");
         }
         
         const hashed_password = await isPasswordCorrect(password, user.password); 
@@ -169,7 +167,7 @@ const loginUser = asyncHandler(async (req, res) => {
                     user: user_data, 
                     access_token: access_token, 
                     refresh_token: refresh_token}, 
-                    "Customer logged in successfully"))
+                    "Company logged in successfully"))
                 }
         })
 
@@ -180,7 +178,7 @@ const logoutUser = asyncHandler(async (req, res) => {
         throw new ApiError(401, "Unauthorized request");
     }
 
-    await Customer.findByIdAndUpdate(
+    await Company.findByIdAndUpdate(
         user._id,
         {
             $unset: {
@@ -192,9 +190,9 @@ const logoutUser = asyncHandler(async (req, res) => {
         }
     )
 
-    console.log("Customer logged out successfully:", user.user_name);
+    console.log("Company logged out successfully:", user.user_name);
     return res.status(200).clearCookie("access_token", options).clearCookie("refresh_token", options).json(
-        new ApiResponse(200, {}, "Customer logged out successfully"))
+        new ApiResponse(200, {}, "Company logged out successfully"))
 })
 
 
@@ -209,10 +207,10 @@ const refresh_access_token = asyncHandler(async(req, res) => {
         const decoded_info = jwt.verify(incoming_refresh_token, process.env.REFRESH_TOKEN_SECRET)
         console.log("decoded info:", decoded_info)
         
-        const user = await Customer.findById(decoded_info?._id)
+        const user = await Company.findById(decoded_info?._id)
             if (!user) {
                     throw new ApiError(401, "Invalid Refresh Token")}
-            console.log("Customer found:", user.user_name);
+            console.log("Company found:", user.user_name);
     
             // verify the refresh tken with the one that is stored in db
             console.log("Incoming refresh token:", incoming_refresh_token);
@@ -256,13 +254,13 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
     if(!(new_password || confirm_password)){
         throw new ApiError(400, "Password and confirm password are required")}
     if(! (user_name || email) ){
-        throw new ApiError(400, "Customer name or email is required");
+        throw new ApiError(400, "Company name or email is required");
     }
     
     if (email){
-        const existing_user = await Customer.findOne({email: email})
+        const existing_user = await Company.findOne({email: email})
         if(!existing_user){
-            throw new ApiError(400, "Customer dosen't exist")}
+            throw new ApiError(400, "Company dosen't exist")}
 
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
@@ -279,9 +277,9 @@ const changeCurrentPassword = asyncHandler(async(req, res) => {
         return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"))}
 
     else if(user_name){
-        const existing_user = await Customer.findOne({user_name: user_name})
+        const existing_user = await Company.findOne({user_name: user_name})
         if(!existing_user){
-            throw new ApiError(400, "Customer dosen't exist")}
+            throw new ApiError(400, "Company dosen't exist")}
         if ( !(new_password === confirm_password)){
             throw new ApiError(400, "Password dosen't match")}
         if(new_password.length < 6){
@@ -317,7 +315,7 @@ const updateAccountDetails = asyncHandler(async(req, res) => {
     user.email = email
     await user.save({validateBeforeSave: false})
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Customer details updated successfully"))})
+    return res.status(200).json(new ApiResponse(200, {user: user}, "Company details updated successfully"))})
 
 
 const updateUserAvatar = asyncHandler(async(req, res) => {
@@ -346,13 +344,13 @@ const updateUserAvatar = asyncHandler(async(req, res) => {
     await user.save({validateBeforeSave: false}) // save the user without validating the user schema again
 
     // alernative method to update avatar:
-    // const updated_user = await Customer.findByIdAndUpdate(
+    // const updated_user = await Company.findByIdAndUpdate(
     //     user?._id,
     // { $set: {avatar: avatar.url}},
     // {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Customer avatar updated successfully"))
+    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Company avatar updated successfully"))
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Customer avatar updated successfully"))
+    return res.status(200).json(new ApiResponse(200, {user: user}, "Company avatar updated successfully"))
 })
 
 

@@ -24,20 +24,20 @@ app.use(cookieParser()) // this is done to parse cookies from the request
 
 
 // import routes
-import companyRouter from './routes/company.routes.js'; 
-import staffRouter from './routes/staff.router.js';
-import regionalAdminRouter from './routes/regional_admin.route.js';
-import healthcheckRouter from "./routes/healthcheck.routes.js"
-import customerRouter from './routes/customer.route.js';
-import transporterRouter from './routes/transporter.route.js';
+import companyRouter from './auth/routes/company.routes.js'; 
+import staffRouter from './auth/routes/staff.router.js';
+import regionalAdminRouter from './auth/routes/regional_admin.route.js';
+import healthcheckRouter from "./auth/routes/healthcheck.routes.js"
+import customerRouter from './auth/routes/customer.route.js';
+import transporterRouter from './auth/routes/transporter.route.js';
 
 // routes declaration
-app.use("/api/v1/companies", companyRouter)
-app.use("/api/v1/transporters", transporterRouter)
-app.use("/api/v1/customers", customerRouter)
-app.use("/api/v1/staff", staffRouter)
-app.use("/api/v1/regional_admins", regionalAdminRouter)
-app.use("/api/v1/healthcheck", healthcheckRouter)
+app.use("/api/v1//auth/companies", companyRouter)
+app.use("/api/v1//auth/transporters", transporterRouter)
+app.use("/api/v1//auth/customers", customerRouter)
+app.use("/api/v1//auth/staff", staffRouter)
+app.use("/api/v1//auth/regional_admins", regionalAdminRouter)
+app.use("/api/v1//auth/healthcheck", healthcheckRouter)
 
 
 export {app}

@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
 
-const regional_admin = new mongoose.Schema({
+const staff = new mongoose.Schema({
     full_name:{
         type: String,
         required: true,
@@ -64,5 +63,6 @@ const regional_admin = new mongoose.Schema({
     timestamps: true
 })
 
-export const RegionalAdmin = mongoose.model("RegionalAdmin", regional_admin)
-// RegionalAdmin can directly contact mongoDB as it is made with the help of mongoose
+
+export const Staff = mongoose.model("Staff", staff)
+// Staff can directly contact mongoDB as it is made with the help of mongoose
