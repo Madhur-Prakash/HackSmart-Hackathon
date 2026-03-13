@@ -5,10 +5,18 @@ import { ApiError } from "../../../utils/ApiError.js";
 
 const AuthHealthCheck = asyncHandler(async (req, res) => {
     try {
-        const response = new ApiResponse(200, "Auth Service Healthcheck successful", {status: "OK"})
-        res.status(200).json(response)
+        return res.json(new ApiResponse(
+            200,
+            {
+                "api_version": "1.0.0",
+                "status": "healthy",
+                "uptime": process.uptime().toFixed(2) + " seconds",
+                "timestamp": new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" })
+            },
+            "Auth Service is healthy"
+            ))
     } catch (error) {
-        throw new ApiError(500, "Auth Service Healthcheck failed", error)
+        throw new ApiError(500, "Auth Service Healthcheck failed")
     }
 })
 

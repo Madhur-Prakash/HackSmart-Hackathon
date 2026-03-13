@@ -27,18 +27,17 @@ app.use(cookieParser()) // this is done to parse cookies from the request
 import companyRouter from './services/auth/routes/company.routes.js'; 
 import staffRouter from './services/auth/routes/staff.router.js';
 import regionalAdminRouter from './services/auth/routes/regional_admin.route.js';
-import healthcheckRouter from "./services/auth/routes/healthcheck.routes.js"
 import customerRouter from './services/auth/routes/customer.route.js';
 import transporterRouter from './services/auth/routes/transporter.route.js';
-import { AuthHealthCheck } from './services/auth/controllers/healthcheck.controller.js';
+import AuthHealthCheck from "./services/auth/routes/healthcheck.routes.js"
 
 // routes declaration
-app.use("/api/v1//auth/companies", companyRouter)
-app.use("/api/v1//auth/transporters", transporterRouter)
-app.use("/api/v1//auth/customers", customerRouter)
-app.use("/api/v1//auth/staff", staffRouter)
-app.use("/api/v1//auth/regional_admins", regionalAdminRouter)
-app.use("/api/v1//auth/healthcheck", healthcheckRouter)
+app.use("/api/v1/auth/companies", companyRouter)
+app.use("/api/v1/auth/transporters", transporterRouter)
+app.use("/api/v1/auth/customers", customerRouter)
+app.use("/api/v1/auth/staff", staffRouter)
+app.use("/api/v1/auth/regional_admins", regionalAdminRouter)
+app.use("/api/v1/auth", AuthHealthCheck)
 
 
 export {app}
