@@ -29,6 +29,10 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Password must be at least 6 characters long");
   }
 
+  if (driving_license_number.length !== 15) {
+    throw new ApiError(400, "Driving license number must be exactly 15 characters long");
+  }
+
   // Check if transporter already exists
   const existing_user = await Transporter.findOne({ email: email });
   if (existing_user) {
@@ -46,18 +50,15 @@ const registerUser = asyncHandler(async (req, res) => {
     }
   }
 
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const hashed_password = await bcrypt.hash(password, salt);
-
-  // Create new transporter with profile
+  // Create new transporter with profile (password will be hashed by pre-save hook)
   const new_user = await Transporter.create({
     name: name,
     user_name: user_name,
     email: email,
     phone_number: phone_number,
     country_code: country_code,
-    password: hashed_password,
+    password: password, // Will be hashed by pre-save hook
+    driving_license_number: driving_license_number,
     status: UserStatus.PENDING,
     gender: gender || null,
     dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
@@ -68,13 +69,13 @@ const registerUser = asyncHandler(async (req, res) => {
     transporterProfile: {
       tier: TransporterTier.BRONZE,
       stats: {
-        totalEarnings: 0,
+        totalEarnings: 0.0,
         totalDeliveries: 0,
-        efficiencyScore: 0,
-        onTimePercentage: 0,
+        efficiencyScore: 0.0,
+        onTimePercentage: 0.0,
         todayDeliveries: 0,
-        todayEarnings: 0,
-        averageRating: 0,
+        todayEarnings: 0.0,
+        averageRating: 0.0,
         totalRatings: 0,
         cancelledTasks: 0,
         rejectedTasks: 0,
@@ -85,26 +86,23 @@ const registerUser = asyncHandler(async (req, res) => {
         backgroundCheck: VerificationStatus.PENDING,
       },
       preferences: {
-        notificationsEnabled: true,
-        emailNotifications: true,
-        pushNotifications: true,
-        smsNotifications: false,
-        preferredLanguage: "en",
-        theme: "light",
-        autoAcceptOrders: false,
-        maxDistanceRadius: 50,
-        minimumRating: 4.0,
+        enableNotifications: true,
+        enableLocationTracking: true,
+        notificationChannels: ["push"],
+        autoAcceptTasks: false,
+        minTaskReward: 0.0,
+        maxTaskDistanceKm: 50.0,
+        preferredAreas: [],
+        languageCode: "en",
+        theme: "auto",
+        shareLocationWithCustomers: true,
+        offlineDuringBreaks: true,
       },
       isAvailable: false,
       isOnline: false,
-      walletBalance: 0,
+      walletBalance: 0.0,
       certifications: [],
     },
-    // Legacy fields for backward compatibility
-    full_name: name,
-    phone_number: phone,
-    country_code: req.body.country_code || "",
-    driving_license_number: driving_license_number,
   });
 
   if (!new_user) {
@@ -116,6 +114,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const refresh_token = create_refresh_token(new_user._id);
 
   // Hash and store refresh token
+  const salt = await bcrypt.genSalt(10);
   const hashed_refresh_token = await bcrypt.hash(refresh_token, salt);
   new_user.refresh_token = hashed_refresh_token;
   await new_user.save({ validateBeforeSave: false });

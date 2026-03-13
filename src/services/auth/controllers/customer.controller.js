@@ -46,18 +46,14 @@ const registerUser = asyncHandler(async (req, res) => {
     }
   }
 
-  // Hash password
-  const salt = await bcrypt.genSalt(10);
-  const hashed_password = await bcrypt.hash(password, salt);
-
-  // Create new customer with profile
+  // Create new customer with profile (password will be hashed by pre-save hook)
   const new_user = await Customer.create({
     name: name,
     user_name: user_name,
     email: email,
     phone_number: phone_number,
     country_code: country_code,
-    password: hashed_password,
+    password: password, // Will be hashed by pre-save hook
     status: UserStatus.PENDING,
     gender: gender || null,
     dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
@@ -69,20 +65,25 @@ const registerUser = asyncHandler(async (req, res) => {
       vehicles: [],
       addresses: [],
       preferences: {
-        notificationsEnabled: true,
-        emailNotifications: true,
-        pushNotifications: true,
-        smsNotifications: false,
-        preferredLanguage: "en",
-        theme: "light",
-        privacyLevel: "private",
+        enableNotifications: true,
+        enableLocationServices: true,
+        enableAIRecommendations: true,
+        notificationChannels: ["push"],
+        autoJoinQueue: false,
+        maxWaitTimeMinutes: 30,
+        maxDistanceKm: 10.0,
+        preferredStations: [],
+        languageCode: "en",
+        theme: "auto",
+        showNearbyStationsOnMap: true,
+        saveSwapHistory: true,
       },
       stats: {
         totalSwaps: 0,
-        totalSpent: 0,
+        totalSpent: 0.0,
         favoriteStationCount: 0,
-        averageWaitTime: 0,
-        reliabilityScore: 0,
+        averageWaitTime: 0.0,
+        reliabilityScore: 0.0,
         streakDays: 0,
       },
       subscriptionPlan: "free",
@@ -99,6 +100,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const refresh_token = create_refresh_token(new_user._id);
 
   // Hash and store refresh token
+  const salt = await bcrypt.genSalt(10);
   const hashed_refresh_token = await bcrypt.hash(refresh_token, salt);
   new_user.refresh_token = hashed_refresh_token;
   await new_user.save({ validateBeforeSave: false });

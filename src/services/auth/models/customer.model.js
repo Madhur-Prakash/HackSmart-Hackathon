@@ -33,7 +33,7 @@ const customer = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    contry_code: {
+    country_code: {
       type: String,
       required: true,
       minlength: 3,
