@@ -4,28 +4,67 @@ import {
   VerificationStatus,
   TransporterTier,
 } from "../../../../src/constants.js";
+import TimeRangeSchema from "./timeRange.Schema.js";
+import { VerificationDocumentSchema } from "./verificationDocument.Schema.js";
 
 // Payment Method Schema
 const PaymentMethodSchema = new mongoose.Schema(
   {
-    id: String,
+    id: {
+      type: String,
+      required: true
+    },
+
+    userId: {
+      type: String,
+      required: true
+    },
+
     type: {
       type: String,
-      enum: ["card", "bank_account", "wallet"],
+      enum: ["card", "upi", "wallet", "cash", "netBanking"],
+      default: "cash"
     },
-    cardDetails: {
-      cardNumber: String,
-      cardHolder: String,
-      expiryDate: String,
-      cvv: String,
+
+    cardLast4: {
+      type: String,
+      default: null
     },
-    bankDetails: {
-      accountNumber: String,
-      accountHolder: String,
-      bankName: String,
-      ifscCode: String,
+
+    cardBrand: {
+      type: String,
+      default: null
     },
-    isDefault: Boolean,
+
+    upiId: {
+      type: String,
+      default: null
+    },
+
+    walletProvider: {
+      type: String,
+      default: null
+    },
+
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+
+    expiryDate: {
+      type: Date,
+      default: null
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   { _id: false }
 );
@@ -33,19 +72,76 @@ const PaymentMethodSchema = new mongoose.Schema(
 // Address Schema
 const AddressSchema = new mongoose.Schema(
   {
-    id: String,
-    type: {
+    id: {
       type: String,
-      enum: ["home", "work", "other"],
+      required: true
     },
-    street: String,
-    city: String,
-    state: String,
-    zipCode: String,
-    country: String,
-    latitude: Number,
-    longitude: Number,
-    isDefault: Boolean,
+
+    userId: {
+      type: String,
+      required: true
+    },
+
+    label: {
+      type: String,
+      enum: ["Home", "Work", "Other"],
+      required: true
+    },
+
+    addressLine1: {
+      type: String,
+      required: true
+    },
+
+    addressLine2: {
+      type: String,
+      default: null
+    },
+
+    city: {
+      type: String,
+      required: true
+    },
+
+    state: {
+      type: String,
+      required: true
+    },
+
+    postalCode: {
+      type: String,
+      required: true
+    },
+
+    country: {
+      type: String,
+      default: "India"
+    },
+
+    latitude: {
+      type: Number,
+      default: null
+    },
+
+    longitude: {
+      type: Number,
+      default: null
+    },
+
+    isDefault: {
+      type: Boolean,
+      default: false
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   { _id: false }
 );
@@ -53,35 +149,156 @@ const AddressSchema = new mongoose.Schema(
 // Vehicle Schema
 const VehicleSchema = new mongoose.Schema(
   {
-    id: String,
-    name: String,
-    make: String,
-    model: String,
-    year: Number,
-    registrationNumber: String,
-    batteryCapacity: Number,
-    batteryType: String,
-    color: String,
-    imageUrl: String,
-    isActive: Boolean,
+    id: {
+      type: String,
+      required: true
+    },
+
+    userId: {
+      type: String,
+      required: true
+    },
+
+    type: {
+      type: String,
+      enum: ["ev", "car", "bike", "truck", "other"], // adjust to your VehicleType enum
+      default: "other"
+    },
+
+    make: {
+      type: String,
+      required: true
+    },
+
+    model: {
+      type: String,
+      required: true
+    },
+
+    registrationNumber: {
+      type: String,
+      default: null
+    },
+
+    color: {
+      type: String,
+      default: null
+    },
+
+    manufacturingYear: {
+      type: Number,
+      default: null
+    },
+
+    batteryCapacity: {
+      type: Number, // kWh
+      default: null
+    },
+
+    batteryType: {
+      type: String,
+      default: null
+    },
+
+    vinNumber: {
+      type: String,
+      default: null
+    },
+
+    isPrimary: {
+      type: Boolean,
+      default: false
+    },
+
+    registrationDate: {
+      type: Date,
+      default: null
+    },
+
+    insuranceExpiryDate: {
+      type: Date,
+      default: null
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
-  { _id: false }
+  {
+    _id: false
+  }
 );
 
 // Customer Preferences Schema
 const CustomerPreferencesSchema = new mongoose.Schema(
   {
-    notificationsEnabled: { type: Boolean, default: true },
-    emailNotifications: { type: Boolean, default: true },
-    pushNotifications: { type: Boolean, default: true },
-    smsNotifications: { type: Boolean, default: false },
-    preferredLanguage: { type: String, default: "en" },
-    theme: { type: String, enum: ["light", "dark"], default: "light" },
-    privacyLevel: {
-      type: String,
-      enum: ["public", "private", "friends_only"],
-      default: "private",
+    enableNotifications: {
+      type: Boolean,
+      default: true
     },
+
+    enableLocationServices: {
+      type: Boolean,
+      default: true
+    },
+
+    enableAIRecommendations: {
+      type: Boolean,
+      default: true
+    },
+
+    notificationChannels: {
+      type: [String],
+      enum: ["push", "email", "sms"],
+      default: ["push"]
+    },
+
+    autoJoinQueue: {
+      type: Boolean,
+      default: false
+    },
+
+    maxWaitTimeMinutes: {
+      type: Number,
+      default: 30
+    },
+
+    maxDistanceKm: {
+      type: Number,
+      default: 10.0
+    },
+
+    preferredStations: {
+      type: [String],
+      default: []
+    },
+
+    languageCode: {
+      type: String,
+      default: "en"
+    },
+
+    theme: {
+      type: String,
+      enum: ["light", "dark", "auto"],
+      default: "auto"
+    },
+
+    showNearbyStationsOnMap: {
+      type: Boolean,
+      default: true
+    },
+
+    saveSwapHistory: {
+      type: Boolean,
+      default: true
+    }
   },
   { _id: false }
 );
@@ -89,15 +306,72 @@ const CustomerPreferencesSchema = new mongoose.Schema(
 // Transporter Preferences Schema
 const TransporterPreferencesSchema = new mongoose.Schema(
   {
-    notificationsEnabled: { type: Boolean, default: true },
-    emailNotifications: { type: Boolean, default: true },
-    pushNotifications: { type: Boolean, default: true },
-    smsNotifications: { type: Boolean, default: false },
-    preferredLanguage: { type: String, default: "en" },
-    theme: { type: String, enum: ["light", "dark"], default: "light" },
-    autoAcceptOrders: { type: Boolean, default: false },
-    maxDistanceRadius: { type: Number, default: 50 },
-    minimumRating: { type: Number, default: 4.0 },
+    enableNotifications: {
+      type: Boolean,
+      default: true
+    },
+
+    enableLocationTracking: {
+      type: Boolean,
+      default: true
+    },
+
+    notificationChannels: {
+      type: [String],
+      enum: ["push", "email", "sms"],
+      default: ["push"]
+    },
+
+    autoAcceptTasks: {
+      type: Boolean,
+      default: false
+    },
+
+    minTaskReward: {
+      type: Number,
+      default: 0.0
+    },
+
+    maxTaskDistanceKm: {
+      type: Number,
+      default: 50.0
+    },
+
+    preferredAreas: {
+      type: [String],
+      default: []
+    },
+
+    languageCode: {
+      type: String,
+      default: "en"
+    },
+
+    theme: {
+      type: String,
+      enum: ["light", "dark", "auto"],
+      default: "auto"
+    },
+
+    shareLocationWithCustomers: {
+      type: Boolean,
+      default: true
+    },
+
+    offlineDuringBreaks: {
+      type: Boolean,
+      default: true
+    },
+
+    workingHoursStart: {
+      type: TimeRangeSchema,
+      default: null
+    },
+
+    workingHoursEnd: {
+      type: TimeRangeSchema,
+      default: null
+    }
   },
   { _id: false }
 );
@@ -139,22 +413,50 @@ const TransporterVerificationSchema = new mongoose.Schema(
     idVerification: {
       type: String,
       enum: Object.values(VerificationStatus),
-      default: VerificationStatus.PENDING,
+      default: VerificationStatus.NOT_SUBMITTED
     },
-    idDocument: String,
-    idExpiryDate: Date,
+
     vehicleVerification: {
       type: String,
       enum: Object.values(VerificationStatus),
-      default: VerificationStatus.PENDING,
+      default: VerificationStatus.NOT_SUBMITTED
     },
-    vehicleDocument: String,
+
     backgroundCheck: {
       type: String,
       enum: Object.values(VerificationStatus),
-      default: VerificationStatus.PENDING,
+      default: VerificationStatus.NOT_SUBMITTED
     },
-    backgroundCheckDate: Date,
+
+    documents: {
+      type: [VerificationDocumentSchema],
+      default: []
+    },
+
+    idVerifiedAt: {
+      type: Date,
+      default: null
+    },
+
+    vehicleVerifiedAt: {
+      type: Date,
+      default: null
+    },
+
+    backgroundCheckAt: {
+      type: Date,
+      default: null
+    },
+
+    rejectionReason: {
+      type: String,
+      default: null
+    },
+
+    lastUpdatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   { _id: false }
 );
@@ -162,12 +464,66 @@ const TransporterVerificationSchema = new mongoose.Schema(
 // Bank Details Schema
 const BankDetailsSchema = new mongoose.Schema(
   {
-    accountHolderName: String,
-    accountNumber: String,
-    bankName: String,
-    ifscCode: String,
-    accountType: { type: String, enum: ["savings", "current"], default: "savings" },
-    panNumber: String,
+    id: {
+      type: String,
+      required: true
+    },
+
+    userId: {
+      type: String,
+      required: true
+    },
+
+    accountHolderName: {
+      type: String,
+      required: true
+    },
+
+    accountNumber: {
+      type: String,
+      required: true
+    },
+
+    ifscCode: {
+      type: String,
+      required: true
+    },
+
+    bankName: {
+      type: String,
+      required: true
+    },
+
+    branchName: {
+      type: String,
+      default: null
+    },
+
+    accountType: {
+      type: String,
+      enum: ["savings", "current"],
+      default: "savings"
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+
+    verifiedAt: {
+      type: Date,
+      default: null
+    },
+
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+
+    updatedAt: {
+      type: Date,
+      default: Date.now
+    }
   },
   { _id: false }
 );
@@ -175,10 +531,25 @@ const BankDetailsSchema = new mongoose.Schema(
 // Emergency Contact Schema
 const EmergencyContactSchema = new mongoose.Schema(
   {
-    name: String,
-    phone: String,
-    email: String,
-    relationship: String,
+    name: {
+      type: String,
+      required: true
+    },
+
+    phone: {
+      type: String,
+      required: true
+    },
+
+    relationship: {
+      type: String,
+      required: true
+    },
+
+    alternatePhone: {
+      type: String,
+      default: null
+    }
   },
   { _id: false }
 );
