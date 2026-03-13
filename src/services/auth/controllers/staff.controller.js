@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../constants.js";
+import { options } from "../../../constants.js";
 import {Staff} from "../models/staff.model.js"
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
