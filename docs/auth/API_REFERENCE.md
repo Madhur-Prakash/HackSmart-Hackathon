@@ -508,7 +508,7 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 {
   "name": "Rahul Sharma",
   "email": "rahul@example.com",
-  "phone": "9123456789",
+  "phone_number": "9123456789",
   "password": "myPassword123",
   "gender": "male",
   "dateOfBirth": "1995-05-15",
@@ -521,7 +521,7 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 |-------|------|----------|-------------|
 | `name` | `string` | Yes | Min 2 chars |
 | `email` | `string` | Yes | Must contain `@`, unique |
-| `phone` | `string` | Yes | 10-15 digits, unique |
+| `phone_number` | `string` | Yes | 10-15 digits, unique |
 | `password` | `string` | Yes | Min 6 chars |
 | `gender` | `string` | No | `"male"`, `"female"`, or `"other"` |
 | `dateOfBirth` | `string` | No | ISO 8601 date format |
@@ -556,20 +556,25 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
         "vehicles": [],
         "addresses": [],
         "preferences": {
-          "notificationsEnabled": true,
-          "emailNotifications": true,
-          "pushNotifications": true,
-          "smsNotifications": false,
-          "preferredLanguage": "en",
-          "theme": "light",
-          "privacyLevel": "private"
+          "enableNotifications": true,
+          "enableLocationServices": true,
+          "enableAIRecommendations": true,
+          "notificationChannels": ["push"],
+          "autoJoinQueue": false,
+          "maxWaitTimeMinutes": 30,
+          "maxDistanceKm": 10.0,
+          "preferredStations": [],
+          "languageCode": "en",
+          "theme": "auto",
+          "showNearbyStationsOnMap": true,
+          "saveSwapHistory": true
         },
         "stats": {
           "totalSwaps": 0,
-          "totalSpent": 0,
+          "totalSpent": 0.0,
           "favoriteStationCount": 0,
-          "averageWaitTime": 0,
-          "reliabilityScore": 0,
+          "averageWaitTime": 0.0,
+          "reliabilityScore": 0.0,
           "streakDays": 0
         },
         "subscriptionPlan": "free",
@@ -877,9 +882,9 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 {
   "name": "Suresh Kumar",
   "email": "suresh@transport.com",
-  "phone": "9988776655",
+  "phone_number": "9988776655",
   "password": "transportPass123",
-  "driving_license_number": "KA-0120200054321",
+  "driving_license_number": "KA0120200054321",
   "gender": "male",
   "dateOfBirth": "1990-08-20",
   "bio": "Professional transporter",
@@ -891,7 +896,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 |-------|------|----------|-------------|
 | `name` | `string` | Yes | Min 2 chars |
 | `email` | `string` | Yes | Must contain `@`, unique |
-| `phone` | `string` | Yes | 10-15 digits, unique |
+| `phone_number` | `string` | Yes | 10-15 digits, unique |
 | `password` | `string` | Yes | Min 6 chars |
 | `driving_license_number` | `string` | Yes | Exactly 15 chars, unique |
 | `gender` | `string` | No | `"male"`, `"female"`, or `"other"` |
