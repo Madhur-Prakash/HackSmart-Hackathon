@@ -1,153 +1,168 @@
 # 📋 User API — Endpoints Cheatsheet
 
-Quick reference for all user profile management endpoints.
+Quick reference for all user profile update endpoints.
 
 ---
 
-## 👤 Customer Profile Endpoints
+## 📌 Summary
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/users/customers/profile` | Get customer profile | ✅ Required |
-| `PATCH` | `/api/v1/users/customers/profile` | Update customer profile | ✅ Required |
-| `POST` | `/api/v1/users/customers/vehicles` | Add vehicle | ✅ Required |
-| `DELETE` | `/api/v1/users/customers/vehicles/:vehicleId` | Delete vehicle | ✅ Required |
-| `POST` | `/api/v1/users/customers/addresses` | Add address | ✅ Required |
-| `DELETE` | `/api/v1/users/customers/addresses/:addressId` | Delete address | ✅ Required |
-| `PATCH` | `/api/v1/users/customers/preferences` | Update preferences | ✅ Required |
+Only **3 types of operations**:
+1. Update account details (name, phone)
+2. Upload avatar (profile picture)
+3. Update profile (bio, gender, DOB — customer/transporter only)
 
 ---
 
-## 🚛 Transporter Profile Endpoints
+## 👤 Customer Endpoints
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| `GET` | `/api/v1/users/transporters/profile` | Get transporter profile | ✅ Required |
-| `PATCH` | `/api/v1/users/transporters/profile` | Update transporter profile | ✅ Required |
-| `PATCH` | `/api/v1/users/transporters/availability` | Update availability status | ✅ Required |
-| `POST` | `/api/v1/users/transporters/certifications` | Add certification | ✅ Required |
-| `DELETE` | `/api/v1/users/transporters/certifications/:certId` | Delete certification | ✅ Required |
-| `GET` | `/api/v1/users/transporters/verification` | Get verification status | ✅ Required |
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| `PATCH` | `/api/v1/user/customer/update_account_details` | Update name & phone | ✅ Required |
+| `PATCH` | `/api/v1/user/customer/update_avatar` | Upload profile picture | ✅ Required |
+| `PATCH` | `/api/v1/user/customer/update_profile` | Update bio, gender, DOB | ✅ Required |
 
 ---
 
-## 🔑 Quick Examples
+## 🚛 Transporter Endpoints
 
-### Get Customer Profile
-```bash
-curl -X GET http://localhost:8000/api/v1/users/customers/profile \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### Update Customer Profile
-```bash
-curl -X PATCH http://localhost:8000/api/v1/users/customers/profile \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "subscriptionPlan": "premium",
-    "preferences": {
-      "enableNotifications": true,
-      "theme": "dark"
-    }
-  }'
-```
-
-### Add Vehicle
-```bash
-curl -X POST http://localhost:8000/api/v1/users/customers/vehicles \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "ev",
-    "make": "Tesla",
-    "model": "Model 3",
-    "registrationNumber": "MH02AB1234",
-    "color": "White",
-    "manufacturingYear": 2023,
-    "batteryCapacity": 75,
-    "batteryType": "Li-ion"
-  }'
-```
-
-### Get Transporter Profile
-```bash
-curl -X GET http://localhost:8000/api/v1/users/transporters/profile \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### Update Transporter Profile
-```bash
-curl -X PATCH http://localhost:8000/api/v1/users/transporters/profile \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "bankDetails": {
-      "bankName": "HDFC Bank",
-      "accountHolderName": "Suresh Kumar",
-      "accountNumber": "1234567890",
-      "ifscCode": "HDFC0000123"
-    },
-    "preferences": {
-      "autoAcceptTasks": true,
-      "maxTaskDistanceKm": 75
-    }
-  }'
-```
-
-### Update Availability Status
-```bash
-curl -X PATCH http://localhost:8000/api/v1/users/transporters/availability \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "isAvailable": true,
-    "isOnline": true
-  }'
-```
-
-### Add Certification
-```bash
-curl -X POST http://localhost:8000/api/v1/users/transporters/certifications \
-  -H "Authorization: Bearer <access_token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "SafetyTraining",
-    "issuedAt": "2026-01-15",
-    "expiresAt": "2027-01-15"
-  }'
-```
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| `PATCH` | `/api/v1/user/transporter/update_account_details` | Update name & phone | ✅ Required |
+| `PATCH` | `/api/v1/user/transporter/update_avatar` | Upload profile picture | ✅ Required |
+| `PATCH` | `/api/v1/user/transporter/update_profile` | Update bio, gender, DOB | ✅ Required |
 
 ---
 
-## 📋 Request/Response Summary
+## 🏢 Company Endpoints
 
-### Customer Profile Update
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| `PATCH` | `/api/v1/user/company/update_account_details` | Update company info | ✅ Required |
+| `PATCH` | `/api/v1/user/company/update_avatar` | Upload logo | ✅ Required |
 
-**Request:**
+---
+
+## 👷 Staff Endpoints
+
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| `PATCH` | `/api/v1/user/staff/update_account_details` | Update name & phone | ✅ Required |
+| `PATCH` | `/api/v1/user/staff/update_avatar` | Upload profile picture | ✅ Required |
+
+---
+
+## 🌍 Regional Admin Endpoints
+
+| Method | Endpoint | Purpose | Auth |
+|--------|----------|---------|------|
+| `PATCH` | `/api/v1/user/regional_admin/update_account_details` | Update name & phone | ✅ Required |
+| `PATCH` | `/api/v1/user/regional_admin/update_avatar` | Upload profile picture | ✅ Required |
+
+---
+
+## 🔧 Example Requests
+
+### Update Account Details
+```bash
+curl -X PATCH http://localhost:8000/api/v1/user/customer/update_account_details \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "first_name": "Jane",
+    "last_name": "Doe",
+    "phone_number": "+919876543210"
+  }'
+```
+
+**Response:**
 ```json
 {
-  "vehicles": [],
-  "addresses": [],
-  "preferences": { /* partial or full */ },
-  "subscriptionPlan": "premium",
-  "paymentMethods": []
+  "status_code": 200,
+  "message": "Account details updated successfully",
+  "success": true,
+  "data": {
+    "user": {
+      "_id": "user_123",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "phone_number": "+919876543210"
+    }
+  }
 }
 ```
 
-**Response Codes:**
-- `200 OK` — Success
-- `400 Bad Request` — Invalid data
-- `401 Unauthorized` — Missing/invalid token
-- `404 Not Found` — Customer not found
-- `500 Server Error` — Internal error
+---
+
+### Upload Avatar
+```bash
+curl -X PATCH http://localhost:8000/api/v1/user/customer/update_avatar \
+  -H "Authorization: Bearer <token>" \
+  -F "avatar=@/path/to/image.jpg"
+```
+
+**Response:**
+```json
+{
+  "status_code": 200,
+  "message": "Avatar updated successfully",
+  "success": true,
+  "data": {
+    "avatar_url": "https://cdn.example.com/avatars/user_123.jpg"
+  }
+}
+```
 
 ---
 
-### Transporter Profile Update
+### Update Profile (Customer/Transporter)
+```bash
+curl -X PATCH http://localhost:8000/api/v1/user/customer/update_profile \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "bio": "Electric vehicle enthusiast",
+    "gender": "male",
+    "dateOfBirth": "1990-01-15"
+  }'
+```
 
-**Request:**
+**Response:**
 ```json
+{
+  "status_code": 200,
+  "message": "Profile updated successfully",
+  "success": true,
+  "data": {
+    "profile": {
+      "bio": "Electric vehicle enthusiast",
+      "gender": "male",
+      "dateOfBirth": "1990-01-15",
+      "profileCompleted": true
+    }
+  }
+}
+```
+
+---
+
+## ❌ HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| `200` | Success |
+| `400` | Bad request — invalid fields |
+| `401` | Unauthorized — missing/invalid token |
+| `403` | Forbidden — endpoint not available for this role |
+| `422` | Validation error |
+| `500` | Server error |
+
+---
+
+**Last Updated:** March 14, 2026
+
+---
+
+## � Quick Examples
 {
   "transportVehicle": {},
   "bankDetails": {},

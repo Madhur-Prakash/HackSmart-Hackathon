@@ -1,23 +1,19 @@
-# 🚀 Frontend / Mobile App Integration Guide
+# 🚀 Auth API — Integration Guide
 
-> Step-by-step guide to connect your frontend or mobile app to the NavSwap backend.
+> Step-by-step guide to implement authentication in your frontend or mobile app.
 
 ---
 
 ## 📑 Table of Contents
 
-- [Getting Started](#-getting-started)
-- [Base URL](#-base-url)
-- [Authentication Flow](#-authentication-flow)
-- [Storing Tokens](#-storing-tokens)
-- [Making Authenticated Requests](#-making-authenticated-requests)
-- [Token Refresh Flow](#-token-refresh-flow)
-- [File Upload (Avatar)](#-file-upload-avatar)
-- [Error Handling](#-error-handling)
-- [Code Examples](#-code-examples)
-  - [React / Next.js](#reactnextjs)
-  - [React Native / Expo](#react-nativeexpo)
-  - [Flutter / Dart](#flutterdart)
+1. [Getting Started](#-getting-started)
+2. [Authentication Flow](#-authentication-flow)
+3. [Available Endpoints](#-available-endpoints)
+4. [Storing Tokens](#-storing-tokens)
+5. [Making Authenticated Requests](#-making-authenticated-requests)
+6. [File Upload (Avatar)](#-file-upload-avatar)
+7. [Error Handling](#-error-handling)
+8. [Code Examples](#-code-examples)
 
 ---
 
@@ -29,40 +25,53 @@
 
 ---
 
-## 🌐 Base URL
+---
 
-```
-Development:  http://localhost:8000/api/v1
-Production:   https://your-domain.com/api/v1
-```
+## Available Endpoints
+
+All Auth endpoints are under `/api/v1/auth/{role}/` where role is one of:
+- `customers`
+- `transporters`
+- `companies`
+- `staff`
+- `regional_admins`
+
+### All Roles Support:
+- ✅ `POST /register` - User registration
+- ✅ `POST /login` - User login
+- ✅ `POST /refresh_access_token` - Refresh tokens
+- ✅ `POST /change_password` - Change password
+- ✅ `POST /logout` - Logout (requires auth)
+- ✅ `GET /current_user` - Get current user (requires auth)
+
+### Transporters Only Support:
+- ✅ `PATCH /update_account_details` - Update basic details
+- ✅ `PATCH /update_avatar` - Upload avatar image (multipart/form-data)
 
 ---
 
 ## 🔐 Authentication Flow
 
-### Registration → Login → Use App → Refresh → Logout
-
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                        AUTH FLOW DIAGRAM                              │
-│                                                                       │
-│   1. POST /register                                                   │
-│       ↓ Returns: { user, access_token, refresh_token }               │
-│       ↓ Sets cookies: access_token, refresh_token                    │
-│                                                                       │
-│   2. Use access_token for all protected endpoints                     │
-│       GET  /current_user  (Header: Authorization: Bearer <token>)    │
-│       POST /logout                                                    │
-│       PATCH /update_account_details                                   │
-│       PATCH /update_avatar                                            │
-│                                                                       │
-│   3. When access_token expires → 401 error                           │
-│       POST /refresh_access_token  (send refresh_token)               │
-│       ↓ Returns new { access_token, refresh_token }                  │
-│                                                                       │
-│   4. POST /logout                                                     │
-│       ↓ Clears cookies, removes refresh_token from DB                │
-└──────────────────────────────────────────────────────────────────────┘
+1. POST /api/v1/auth/{role}/register
+   ↓ Returns: { user, access_token, refresh_token }
+   ↓ Sets httpOnly cookies
+
+2. Use access_token for protected endpoints
+   Header: Authorization: Bearer {access_token}
+   
+   Available operations:
+   - GET /api/v1/auth/{role}/current_user
+   - POST /api/v1/auth/{role}/logout
+   - PATCH /api/v1/auth/transporters/update_account_details (transporters only)
+   - PATCH /api/v1/auth/transporters/update_avatar (transporters only)
+
+3. When access_token expires → GET 401 response
+   POST /api/v1/auth/{role}/refresh_access_token
+   ↓ Returns new { access_token, refresh_token }
+
+4. POST /api/v1/auth/{role}/logout
+   ↓ Clears tokens and ends session
 ```
 
 ---
@@ -118,77 +127,113 @@ String? token = await storage.read(key: 'access_token');
 ```javascript
 const API_BASE = 'http://localhost:8000/api/v1';
 
-// Helper function for authenticated requests
 async function apiRequest(endpoint, options = {}) {
-  const token = getAccessToken();
+  const token = localStorage.getItem('access_token');
   
-  const config = {
+  const response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
       ...(token && { 'Authorization': `Bearer ${token}` }),
       ...options.headers,
     },
-  };
+  });
 
-  const response = await fetch(`${API_BASE}${endpoint}`, config);
   const data = await response.json();
 
-  // Auto-refresh on 401
-  if (response.status === 401 && data.message !== 'Invalid password') {
+  // Handle 401 — try refreshing token
+  if (response.status === 401) {
     const refreshed = await refreshAccessToken();
     if (refreshed) {
-      // Retry the original request with new token
-      config.headers['Authorization'] = `Bearer ${getAccessToken()}`;
-      const retryResponse = await fetch(`${API_BASE}${endpoint}`, config);
-      return retryResponse.json();
+      // Retry with new token
+      return apiRequest(endpoint, options);
     }
   }
 
   return data;
 }
+
+async function refreshAccessToken() {
+  const token = localStorage.getItem('refresh_token');
+  const role = localStorage.getItem('user_role'); // store this after login
+  
+  try {
+    const response = await fetch(
+      `${API_BASE}/auth/${role}/refresh_access_token`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+
+    const data = await response.json();
+    if (data.success) {
+      localStorage.setItem('access_token', data.data.access_token);
+      localStorage.setItem('refresh_token', data.data.refresh_token);
+      return true;
+    }
+  } catch (err) {
+    console.error('Token refresh failed:', err);
+  }
+  
+  return false;
+}
 ```
 
-### Axios (with interceptors)
+### Axios
 
 ```javascript
 import axios from 'axios';
 
 const api = axios.create({
   baseURL: 'http://localhost:8000/api/v1',
-  withCredentials: true, // sends cookies automatically
+  withCredentials: true,
 });
 
-// Request interceptor — attach token
 api.interceptors.request.use((config) => {
-  const token = getAccessToken();
+  const token = localStorage.getItem('access_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Response interceptor — auto-refresh on 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       try {
-        const { data } = await api.post('/companies/refresh_access_token');
-        setTokens(data.data.access_token, data.data.refresh_token);
-        originalRequest.headers.Authorization = `Bearer ${data.data.access_token}`;
+        const role = localStorage.getItem('user_role');
+        const refreshToken = localStorage.getItem('refresh_token');
+        
+        const response = await axios.post(
+          `/auth/${role}/refresh_access_token`,
+          {},
+          {
+            headers: { 'Authorization': `Bearer ${refreshToken}` },
+          }
+        );
+
+        const { access_token, refresh_token } = response.data.data;
+        localStorage.setItem('access_token', access_token);
+        localStorage.setItem('refresh_token', refresh_token);
+
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Redirect to login
+        // Refresh failed — redirect to login
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -198,525 +243,298 @@ export default api;
 
 ---
 
-## 🔄 Token Refresh Flow
+## 📁 File Upload (Avatar — Transporters Only)
 
-When the `access_token` expires, you'll get a `401` response. Use the refresh token to get new tokens:
+Only transporters can upload avatars. The endpoint is `PATCH /api/v1/auth/transporters/update_avatar`.
 
-```javascript
-async function refreshAccessToken() {
-  try {
-    const response = await fetch(`${API_BASE}/companies/refresh_access_token`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${getRefreshToken()}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) throw new Error('Refresh failed');
-
-    const data = await response.json();
-    setTokens(data.data.access_token, data.data.refresh_token);
-    return true;
-  } catch (error) {
-    // Both tokens expired — redirect to login
-    clearTokens();
-    return false;
-  }
-}
-```
-
-> **Note:** Use the correct base path for refresh based on user role:
-> - Company: `/api/v1/companies/refresh_access_token`
-> - Customer: `/api/v1/customers/refresh_access_token`
-> - Transporter: `/api/v1/transporters/refresh_access_token`
-> - Staff: `/api/v1/staff/refresh_access_token`
-> - Regional Admin: `/api/v1/regional_admins/refresh_access_token`
-
----
-
-## 📁 File Upload (Avatar)
-
-Avatar upload uses `multipart/form-data`. Do **not** set `Content-Type` manually — the browser/client sets the boundary automatically.
+Upload uses `multipart/form-data`. Do **not** set Content-Type manually — the client library handles this.
 
 ### JavaScript
 
 ```javascript
-async function uploadAvatar(file) {
+const API_BASE = 'http://localhost:8000/api/v1';
+
+async function uploadAvatar(file, token) {
   const formData = new FormData();
   formData.append('avatar', file); // key MUST be "avatar"
 
-  const response = await fetch(`${API_BASE}/companies/update_avatar`, {
-    method: 'PATCH',
-    headers: {
-      'Authorization': `Bearer ${getAccessToken()}`,
-      // Do NOT set Content-Type here
-    },
-    body: formData,
-  });
+  const response = await fetch(
+    `${API_BASE}/auth/transporters/update_avatar`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // Do NOT set Content-Type
+      },
+      body: formData,
+    }
+  );
 
   return response.json();
 }
 ```
 
-### React Native (Expo)
+### React Native
 
 ```javascript
 import * as ImagePicker from 'expo-image-picker';
 
-async function pickAndUploadAvatar() {
+async function selectAndUploadAvatar(token) {
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ImagePicker.MediaTypeOptions.Images,
     quality: 0.8,
   });
 
   if (!result.canceled) {
-    const uri = result.assets[0].uri;
     const formData = new FormData();
     formData.append('avatar', {
-      uri,
+      uri: result.assets[0].uri,
       name: 'avatar.jpg',
       type: 'image/jpeg',
     });
 
-    const response = await fetch(`${API_BASE}/customers/update_avatar`, {
-      method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: formData,
-    });
+    const response = await fetch(
+      'http://YOUR_IP:8000/api/v1/auth/transporters/update_avatar',
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      }
+    );
 
     return response.json();
   }
 }
 ```
 
-### Flutter / Dart
+### Flutter/Dart
 
 ```dart
 import 'package:http/http.dart' as http;
 
-Future<void> uploadAvatar(String filePath, String token) async {
-  var request = http.MultipartRequest(
+Future<Map<String, dynamic>> uploadTransporterAvatar(
+  File file,
+  String token,
+) async {
+  final request = http.MultipartRequest(
     'PATCH',
-    Uri.parse('http://localhost:8000/api/v1/customers/update_avatar'),
+    Uri.parse('http://YOUR_IP:8000/api/v1/auth/transporters/update_avatar'),
   );
-  
+
   request.headers['Authorization'] = 'Bearer $token';
-  request.files.add(await http.MultipartFile.fromPath('avatar', filePath));
-  
-  var response = await request.send();
-  var responseBody = await response.stream.bytesToString();
-  print(responseBody);
+  request.files.add(await http.MultipartFile.fromPath('avatar', file.path));
+
+  final response = await request.send();
+  final responseBody = await response.stream.bytesToString();
+
+  return jsonDecode(responseBody);
 }
 ```
 
 ---
 
-## 👤 Profile Data Management
+## 💻 Complete Code Examples
 
-After registration, you can update detailed profile information including vehicles, addresses, preferences, and more.
-
-### Update Customer Profile
-
-```javascript
-async function updateCustomerProfile(profileData, token) {
-  const res = await fetch(`${API_BASE}/customers/update_profile`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      vehicles: [
-        {
-          type: 'car', // car, bike, van, truck
-          make: 'Tesla',
-          model: 'Model 3',
-          year: 2023,
-          licensePlate: 'ABC123',
-          color: 'white',
-          seatingCapacity: 5,
-        }
-      ],
-      addresses: [
-        {
-          type: 'home', // home, work, other
-          street: '123 Main St',
-          city: 'Mumbai',
-          state: 'Maharashtra',
-          zipCode: '400001',
-          country: 'India',
-          isDefault: true,
-        }
-      ],
-      preferences: {
-        notificationsEnabled: true,
-        emailNotifications: true,
-        pushNotifications: true,
-        smsNotifications: false,
-        preferredLanguage: 'en',
-        theme: 'light',
-        privacyLevel: 'public',
-      },
-      subscriptionPlan: 'premium',
-      paymentMethods: [
-        {
-          type: 'card', // card, wallet, upi
-          lastFour: '1234',
-          expiryMonth: 12,
-          expiryYear: 2025,
-          isDefault: true,
-        }
-      ],
-    }),
-  });
-
-  return res.json();
-}
-```
-
-### Update Transporter Profile
-
-```javascript
-async function updateTransporterProfile(profileData, token) {
-  const res = await fetch(`${API_BASE}/transporters/update_profile`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      tier: 'silver', // bronze, silver, gold, platinum
-      verification: {
-        idVerification: { status: 'verified', documentType: 'aadhar' },
-        vehicleVerification: { status: 'verified' },
-        backgroundCheck: { status: 'pending' },
-      },
-      transportVehicle: {
-        type: 'van', // bike, auto, van, truck
-        make: 'Mahindra',
-        model: 'XUV500',
-        year: 2023,
-        licensePlate: 'MH01AB1234',
-        color: 'blue',
-        capacity: 5,
-        insuranceExpiry: '2025-12-31',
-      },
-      bankDetails: {
-        accountHolderName: 'John Doe',
-        accountNumber: '1234567890',
-        ifscCode: 'ICIC0000001',
-        bankName: 'ICICI Bank',
-        accountType: 'savings',
-      },
-      preferences: {
-        autoAcceptOrders: false,
-        maxDistanceRadius: 50,
-        minimumRating: 4.0,
-      },
-      isAvailable: true,
-      isOnline: true,
-      certifications: [
-        {
-          name: 'Commercial License',
-          issuedBy: 'RTO',
-          expiryDate: '2026-06-30',
-        }
-      ],
-      emergencyContact: {
-        name: 'Jane Doe',
-        phone: '+919876543210',
-        relationship: 'spouse',
-      },
-    }),
-  });
-
-  return res.json();
-}
-```
-
-### Flutter Example (Profile Update)
-
-```dart
-Future<Map<String, dynamic>> updateCustomerProfile({
-  required String token,
-  required List<Map<String, dynamic>> vehicles,
-  required List<Map<String, dynamic>> addresses,
-  Map<String, dynamic>? preferences,
-}) async {
-  final response = await http.post(
-    Uri.parse('$baseUrl/customers/update_profile'),
-    headers: {
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/json',
-    },
-    body: jsonEncode({
-      'vehicles': vehicles,
-      'addresses': addresses,
-      'preferences': preferences,
-    }),
-  );
-
-  return jsonDecode(response.body);
-}
-```
-
----
-
-## ⚠️ Error Handling
-
-All errors follow a consistent format:
-
-```json
-{
-  "status_code": 400,
-  "message": "All fields are required",
-  "data": null,
-  "success": false,
-  "errors": []
-}
-```
-
-### Recommended error handler:
-
-```javascript
-function handleApiError(response) {
-  switch (response.status_code) {
-    case 400:
-      // Show validation error to user
-      showToast(response.message);
-      break;
-    case 401:
-      // Token expired or invalid — trigger refresh or redirect to login
-      handleUnauthorized();
-      break;
-    case 404:
-      // Resource not found
-      showToast('Not found');
-      break;
-    case 409:
-      // Conflict (e.g., email already exists)
-      showToast(response.message);
-      break;
-    case 500:
-      // Server error
-      showToast('Something went wrong. Please try again.');
-      break;
-    default:
-      showToast(response.message || 'Unknown error');
-  }
-}
-```
-
----
-
-## 💻 Code Examples
-
-### React/Next.js
-
-**Complete Auth Context:**
+### React/Next.js — Customer Registration & Login
 
 ```jsx
-// contexts/AuthContext.jsx
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState } from 'react';
 
-const AuthContext = createContext(null);
+export function CustomerAuth() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [tokens, setTokens] = useState({ access: null, refresh: null });
-  const [loading, setLoading] = useState(true);
+  const register = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/auth/customers/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: 'John',
+          last_name: 'Doe',
+          email,
+          password,
+          phone_number: '+919876543210',
+          country_code: '+91',
+        }),
+      });
 
-  const API = 'http://localhost:8000/api/v1';
-
-  async function register(userData, role = 'customer') {
-    const basePath = role === 'customer' ? 'customers' : 'companies';
-    const res = await fetch(`${API}/${basePath}/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(userData),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setUser(data.data.user);
-      setTokens({ access: data.data.access_token, refresh: data.data.refresh_token });
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('access_token', data.data.access_token);
+        localStorage.setItem('refresh_token', data.data.refresh_token);
+        localStorage.setItem('user_role', 'customers');
+        window.location.href = '/dashboard';
+      }
+    } catch (err) {
+      console.error('Registration failed:', err);
+    } finally {
+      setLoading(false);
     }
-    return data;
-  }
+  };
 
-  async function login(credentials, role = 'customer') {
-    const basePath = role === 'customer' ? 'customers' : 'companies';
-    const res = await fetch(`${API}/${basePath}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(credentials),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setUser(data.data.user);
-      setTokens({ access: data.data.access_token, refresh: data.data.refresh_token });
+  const login = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8000/api/v1/auth/customers/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('access_token', data.data.access_token);
+        localStorage.setItem('refresh_token', data.data.refresh_token);
+        localStorage.setItem('user_role', 'customers');
+        window.location.href = '/dashboard';
+      }
+    } catch (err) {
+      console.error('Login failed:', err);
+    } finally {
+      setLoading(false);
     }
-    return data;
-  }
-
-  async function logout() {
-    await fetch(`${API}/companies/logout`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${tokens.access}` },
-      credentials: 'include',
-    });
-    setUser(null);
-    setTokens({ access: null, refresh: null });
-  }
-
-  async function fetchCurrentUser(role = 'customer') {
-    const basePath = role === 'customer' ? 'customers' : 'companies';
-    const res = await fetch(`${API}/${basePath}/current_user`, {
-      headers: { 'Authorization': `Bearer ${tokens.access}` },
-      credentials: 'include',
-    });
-    const data = await res.json();
-    if (data.success) setUser(data.data.user);
-    setLoading(false);
-    return data;
-  }
+  };
 
   return (
-    <AuthContext.Provider value={{ user, tokens, loading, register, login, logout, fetchCurrentUser }}>
-      {children}
-    </AuthContext.Provider>
+    <div>
+      <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
+      <input value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" type="password" />
+      <button onClick={register} disabled={loading}>Register</button>
+      <button onClick={login} disabled={loading}>Login</button>
+    </div>
   );
 }
-
-export const useAuth = () => useContext(AuthContext);
 ```
 
-### React Native/Expo
+### React Native/Expo — Transporter Auth
 
 ```javascript
-// services/api.js
+import { useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
-const API_BASE = 'http://YOUR_IP:8000/api/v1';
+export function TransporterAuth() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-export async function registerCustomer(data) {
-  const res = await fetch(`${API_BASE}/customers/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      name: data.fullName,
-      email: data.email,
-      phone: data.phone,
-      password: data.password,
-      country_code: '+91',
-      gender: data.gender, // optional
-      dateOfBirth: data.dateOfBirth, // optional, format: YYYY-MM-DD
-      bio: data.bio, // optional
-    }),
-  });
+  const handleLogin = async () => {
+    const response = await fetch('http://YOUR_IP:8000/api/v1/auth/transporters/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
 
-  const result = await res.json();
-  if (result.success) {
-    await SecureStore.setItemAsync('access_token', result.data.access_token);
-    await SecureStore.setItemAsync('refresh_token', result.data.refresh_token);
-  }
-  return result;
-}
+    const data = await response.json();
+    if (data.success) {
+      await SecureStore.setItemAsync('access_token', data.data.access_token);
+      await SecureStore.setItemAsync('refresh_token', data.data.refresh_token);
+      // Navigate to home
+    }
+  };
 
-export async function loginCustomer(email, password) {
-  const res = await fetch(`${API_BASE}/customers/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const result = await res.json();
-  if (result.success) {
-    await SecureStore.setItemAsync('access_token', result.data.access_token);
-    await SecureStore.setItemAsync('refresh_token', result.data.refresh_token);
-  }
-  return result;
-}
-
-export async function getCurrentUser() {
-  const token = await SecureStore.getItemAsync('access_token');
-  const res = await fetch(`${API_BASE}/customers/current_user`, {
-    headers: { 'Authorization': `Bearer ${token}` },
-  });
-  return res.json();
+  return (
+    <View>
+      <TextInput value={email} onChangeText={setEmail} placeholder="Email" />
+      <TextInput value={password} onChangeText={setPassword} placeholder="Password" secureTextEntry />
+      <Button title="Login" onPress={handleLogin} />
+    </View>
+  );
 }
 ```
 
-### Flutter/Dart
+### Flutter/Dart — Complete Authentication
 
 ```dart
-// lib/services/auth_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
-  static const String baseUrl = 'http://YOUR_IP:8000/api/v1';
+  static const baseUrl = 'http://YOUR_IP:8000/api/v1';
   final storage = const FlutterSecureStorage();
 
-  Future<Map<String, dynamic>> registerCustomer({
-    required String fullName,
+  Future<bool> customerRegister({
+    required String firstName,
+    required String lastName,
     required String email,
-    required String phone,
     required String password,
-    String? gender,
-    String? dateOfBirth,
-    String? bio,
+    required String phoneNumber,
   }) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/customers/register'),
+      Uri.parse('$baseUrl/auth/customers/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'name': fullName,
+        'first_name': firstName,
+        'last_name': lastName,
         'email': email,
-        'phone': phone,
         'password': password,
+        'phone_number': phoneNumber,
         'country_code': '+91',
-        if (gender != null) 'gender': gender,
-        if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
-        if (bio != null) 'bio': bio,
       }),
     );
 
-    final data = jsonDecode(response.body);
-    if (data['success'] == true) {
-      await storage.write(key: 'access_token', value: data['data']['access_token']);
-      await storage.write(key: 'refresh_token', value: data['data']['refresh_token']);
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      await storage.write(
+        key: 'access_token',
+        value: data['data']['access_token'],
+      );
+      await storage.write(
+        key: 'refresh_token',
+        value: data['data']['refresh_token'],
+      );
+      return true;
     }
-    return data;
+    return false;
   }
 
-  Future<Map<String, dynamic>> login(String email, String password) async {
+  Future<bool> transporterLogin(String email, String password) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/customers/login'),
+      Uri.parse('$baseUrl/auth/transporters/login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
     );
 
-    final data = jsonDecode(response.body);
-    if (data['success'] == true) {
-      await storage.write(key: 'access_token', value: data['data']['access_token']);
-      await storage.write(key: 'refresh_token', value: data['data']['refresh_token']);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      await storage.write(
+        key: 'access_token',
+        value: data['data']['access_token'],
+      );
+      await storage.write(
+        key: 'refresh_token',
+        value: data['data']['refresh_token'],
+      );
+      return true;
     }
-    return data;
+    return false;
   }
 
-  Future<Map<String, dynamic>> getCurrentUser() async {
+  Future<bool> updateTransporterAccountDetails({
+    required String firstName,
+    required String lastName,
+    required String phoneNumber,
+  }) async {
     final token = await storage.read(key: 'access_token');
-    final response = await http.get(
-      Uri.parse('$baseUrl/customers/current_user'),
-      headers: {'Authorization': 'Bearer $token'},
+
+    final response = await http.patch(
+      Uri.parse('$baseUrl/auth/transporters/update_account_details'),
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'first_name': firstName,
+        'last_name': lastName,
+        'phone_number': phoneNumber,
+      }),
     );
-    return jsonDecode(response.body);
+
+    return response.statusCode == 200;
   }
 }
 ```

@@ -6,7 +6,7 @@
 
 ---
 
-## 🏢 Company (Super Admin) — `/api/v1/companies`
+## 🏢 Company (Super Admin) — `/api/v1/auth/companies`
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
@@ -21,7 +21,7 @@
 
 ---
 
-## 👤 Customer — `/api/v1/customers`
+## 👤 Customer — `/api/v1/auth/customers`
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
@@ -37,7 +37,7 @@
 
 ---
 
-## 🚛 Transporter — `/api/v1/transporters`
+## 🚛 Transporter — `/api/v1/auth/transporters`
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
@@ -53,7 +53,7 @@
 
 ---
 
-## 👷 Staff — `/api/v1/staff`
+## 👷 Staff — `/api/v1/auth/staff`
 
 > Password is auto-generated and emailed. No `password` field in register body.
 
@@ -70,7 +70,7 @@
 
 ---
 
-## 🌍 Regional Admin — `/api/v1/regional_admins`
+## 🌍 Regional Admin — `/api/v1/auth/regional_admins`
 
 > Password is auto-generated and emailed. No `password` field in register body.
 

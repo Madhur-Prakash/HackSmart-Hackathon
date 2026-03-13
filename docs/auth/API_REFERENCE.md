@@ -98,7 +98,7 @@ Every successful response follows this structure:
 
 ## 🏢 Company (Super Admin) API
 
-**Base path:** `/api/v1/companies`
+**Base path:** `/api/v1/auth/companies`
 
 ### 1. Register Company
 
@@ -106,7 +106,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/companies/register` |
+| **URL** | `POST /api/v1/auth/companies/register` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -180,7 +180,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/companies/login` |
+| **URL** | `POST /api/v1/auth/companies/login` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -251,7 +251,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/companies/logout` |
+| **URL** | `POST /api/v1/auth/companies/logout` |
 | **Auth** | Required (`access_token`) |
 
 **Request Body:** None
@@ -281,7 +281,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/companies/refresh_access_token` |
+| **URL** | `POST /api/v1/auth/companies/refresh_access_token` |
 | **Auth** | Requires `refresh_token` via cookie or `Authorization: Bearer <refresh_token>` |
 
 **Request Body:** None
@@ -314,7 +314,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/companies/change_password` |
+| **URL** | `POST /api/v1/auth/companies/change_password` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -363,7 +363,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `GET /api/v1/companies/current_user` |
+| **URL** | `GET /api/v1/auth/companies/current_user` |
 | **Auth** | Required (`access_token`) |
 
 **Request Body:** None
@@ -402,7 +402,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `PATCH /api/v1/companies/update_account_details` |
+| **URL** | `PATCH /api/v1/auth/companies/update_account_details` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `application/json` |
 
@@ -439,7 +439,7 @@ Creates a new company account with `super_admin` role.
 
 | | |
 |---|---|
-| **URL** | `PATCH /api/v1/companies/update_avatar` |
+| **URL** | `PATCH /api/v1/auth/companies/update_avatar` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `multipart/form-data` |
 
@@ -452,7 +452,7 @@ Creates a new company account with `super_admin` role.
 **Example (cURL):**
 
 ```bash
-curl -X PATCH http://localhost:8000/api/v1/companies/update_avatar \
+curl -X PATCH http://localhost:8000/api/v1/auth/companies/update_avatar \
   -H "Authorization: Bearer <access_token>" \
   -F "avatar=@/path/to/photo.jpg"
 ```
@@ -463,7 +463,7 @@ curl -X PATCH http://localhost:8000/api/v1/companies/update_avatar \
 const formData = new FormData();
 formData.append('avatar', fileInput.files[0]);
 
-const response = await fetch('http://localhost:8000/api/v1/companies/update_avatar', {
+const response = await fetch('http://localhost:8000/api/v1/auth/companies/update_avatar', {
   method: 'PATCH',
   headers: {
     'Authorization': 'Bearer ' + accessToken
@@ -492,13 +492,13 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 
 ## 👤 Customer API
 
-**Base path:** `/api/v1/customers`
+**Base path:** `/api/v1/auth/customers`
 
 ### 1. Register Customer
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/register` |
+| **URL** | `POST /api/v1/auth/customers/register` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -607,7 +607,7 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/login` |
+| **URL** | `POST /api/v1/auth/customers/login` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -650,7 +650,7 @@ _Or by username:_
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/logout` |
+| **URL** | `POST /api/v1/auth/customers/logout` |
 | **Auth** | Required (`access_token`) |
 
 **Success Response — `200 OK`:**
@@ -670,7 +670,7 @@ _Or by username:_
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/refresh_access_token` |
+| **URL** | `POST /api/v1/auth/customers/refresh_access_token` |
 | **Auth** | Requires `refresh_token` |
 
 Same pattern as [Company Refresh Token](#4-refresh-access-token).
@@ -681,7 +681,7 @@ Same pattern as [Company Refresh Token](#4-refresh-access-token).
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/change_password` |
+| **URL** | `POST /api/v1/auth/customers/change_password` |
 | **Auth** | None |
 
 Same pattern as [Company Change Password](#5-change-password).
@@ -692,7 +692,7 @@ Same pattern as [Company Change Password](#5-change-password).
 
 | | |
 |---|---|
-| **URL** | `GET /api/v1/customers/current_user` |
+| **URL** | `GET /api/v1/auth/customers/current_user` |
 | **Auth** | Required (`access_token`) |
 
 Same pattern as [Company Get Current User](#6-get-current-user).
@@ -703,7 +703,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `PATCH /api/v1/customers/update_account_details` |
+| **URL** | `PATCH /api/v1/auth/customers/update_account_details` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `application/json` |
 
@@ -746,7 +746,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `PATCH /api/v1/customers/update_avatar` |
+| **URL** | `PATCH /api/v1/auth/customers/update_avatar` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `multipart/form-data` |
 
@@ -778,7 +778,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/customers/update_profile` |
+| **URL** | `POST /api/v1/auth/customers/update_profile` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `application/json` |
 
@@ -866,13 +866,13 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 ## 🚛 Transporter API
 
-**Base path:** `/api/v1/transporters`
+**Base path:** `/api/v1/auth/transporters`
 
 ### 1. Register Transporter
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/transporters/register` |
+| **URL** | `POST /api/v1/auth/transporters/register` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -981,13 +981,13 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | # | Method | Endpoint | Auth |
 |---|--------|----------|------|
-| 2 | `POST` | `/api/v1/transporters/login` | None |
-| 3 | `POST` | `/api/v1/transporters/logout` | Required |
-| 4 | `POST` | `/api/v1/transporters/refresh_access_token` | `refresh_token` |
-| 5 | `POST` | `/api/v1/transporters/change_password` | None |
-| 6 | `GET` | `/api/v1/transporters/current_user` | Required |
-| 7 | `PATCH` | `/api/v1/transporters/update_account_details` | Required |
-| 8 | `PATCH` | `/api/v1/transporters/update_avatar` | Required |
+| 2 | `POST` | `/api/v1/auth/transporters/login` | None |
+| 3 | `POST` | `/api/v1/auth/transporters/logout` | Required |
+| 4 | `POST` | `/api/v1/auth/transporters/refresh_access_token` | `refresh_token` |
+| 5 | `POST` | `/api/v1/auth/transporters/change_password` | None |
+| 6 | `GET` | `/api/v1/auth/transporters/current_user` | Required |
+| 7 | `PATCH` | `/api/v1/auth/transporters/update_account_details` | Required |
+| 8 | `PATCH` | `/api/v1/auth/transporters/update_avatar` | Required |
 
 ---
 
@@ -995,7 +995,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/transporters/update_profile` |
+| **URL** | `POST /api/v1/auth/transporters/update_profile` |
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `application/json` |
 
@@ -1085,7 +1085,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 ## 👷 Staff API
 
-**Base path:** `/api/v1/staff`
+**Base path:** `/api/v1/auth/staff`
 
 > **Important:** Staff accounts are created by admins. The password is **auto-generated** and **emailed** to the staff member. Staff must change the password after the first login.
 
@@ -1093,7 +1093,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/staff/register` |
+| **URL** | `POST /api/v1/auth/staff/register` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -1156,19 +1156,19 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | # | Method | Endpoint | Auth |
 |---|--------|----------|------|
-| 2 | `POST` | `/api/v1/staff/login` | None |
-| 3 | `POST` | `/api/v1/staff/logout` | Required |
-| 4 | `POST` | `/api/v1/staff/refresh_access_token` | `refresh_token` |
-| 5 | `POST` | `/api/v1/staff/change_password` | None |
-| 6 | `GET` | `/api/v1/staff/current_user` | Required |
-| 7 | `PATCH` | `/api/v1/staff/update_account_details` | Required |
-| 8 | `PATCH` | `/api/v1/staff/update_avatar` | Required |
+| 2 | `POST` | `/api/v1/auth/staff/login` | None |
+| 3 | `POST` | `/api/v1/auth/staff/logout` | Required |
+| 4 | `POST` | `/api/v1/auth/staff/refresh_access_token` | `refresh_token` |
+| 5 | `POST` | `/api/v1/auth/staff/change_password` | None |
+| 6 | `GET` | `/api/v1/auth/staff/current_user` | Required |
+| 7 | `PATCH` | `/api/v1/auth/staff/update_account_details` | Required |
+| 8 | `PATCH` | `/api/v1/auth/staff/update_avatar` | Required |
 
 ---
 
 ## 🌍 Regional Admin API
 
-**Base path:** `/api/v1/regional_admins`
+**Base path:** `/api/v1/auth/regional_admins`
 
 > **Important:** Regional Admin accounts are created by super admins. The password is **auto-generated** and **emailed** to the regional admin. They must change the password after the first login.
 
@@ -1176,7 +1176,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | | |
 |---|---|
-| **URL** | `POST /api/v1/regional_admins/register` |
+| **URL** | `POST /api/v1/auth/regional_admins/register` |
 | **Auth** | None |
 | **Content-Type** | `application/json` |
 
@@ -1239,13 +1239,13 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 
 | # | Method | Endpoint | Auth |
 |---|--------|----------|------|
-| 2 | `POST` | `/api/v1/regional_admins/login` | None |
-| 3 | `POST` | `/api/v1/regional_admins/logout` | Required |
-| 4 | `POST` | `/api/v1/regional_admins/refresh_access_token` | `refresh_token` |
-| 5 | `POST` | `/api/v1/regional_admins/change_password` | None |
-| 6 | `GET` | `/api/v1/regional_admins/current_user` | Required |
-| 7 | `PATCH` | `/api/v1/regional_admins/update_account_details` | Required |
-| 8 | `PATCH` | `/api/v1/regional_admins/update_avatar` | Required |
+| 2 | `POST` | `/api/v1/auth/regional_admins/login` | None |
+| 3 | `POST` | `/api/v1/auth/regional_admins/logout` | Required |
+| 4 | `POST` | `/api/v1/auth/regional_admins/refresh_access_token` | `refresh_token` |
+| 5 | `POST` | `/api/v1/auth/regional_admins/change_password` | None |
+| 6 | `GET` | `/api/v1/auth/regional_admins/current_user` | Required |
+| 7 | `PATCH` | `/api/v1/auth/regional_admins/update_account_details` | Required |
+| 8 | `PATCH` | `/api/v1/auth/regional_admins/update_avatar` | Required |
 
 ---
 

@@ -1,356 +1,533 @@
 # 🔗 User API — Integration Guide
 
-Step-by-step guide to integrate user profile management into your frontend/mobile app.
+> Update user profiles and basic account details after authentication.
 
 ---
 
 ## 📑 Table of Contents
 
-1. [Initial Setup](#-initial-setup)
-2. [Customer Integration](#-customer-integration)
-3. [Transporter Integration](#-transporter-integration)
-4. [Error Handling](#-error-handling)
-5. [TypeScript Definitions](#-typescript-definitions)
+1. [Available Endpoints](#-available-endpoints)
+2. [Update Account Details](#-update-account-details)
+3. [Upload Avatar](#-upload-avatar)
+4. [Update Profile](#-update-profile-customer--transporter-only)
+5. [Error Handling](#-error-handling)
+6. [Code Examples](#-code-examples)
 
 ---
 
-## 🎯 Initial Setup
+## ✅ Available Endpoints
 
-### 1. Base Configuration
+All endpoints are under `/api/v1/user/{role}/` where role is one of:
+- `customer`
+- `transporter`
+- `company`
+- `staff`
+- `regional_admin`
+
+### All Roles Support:
+- ✅ `PATCH /update_account_details` - Update basic user information
+- ✅ `PATCH /update_avatar` - Upload profile picture (multipart/form-data)
+
+### Customer & Transporter Only:
+- ✅ `PATCH /update_profile` - Update detailed profile
+
+### Full Examples:
+```
+PATCH /api/v1/user/customer/update_account_details
+PATCH /api/v1/user/customer/update_avatar
+PATCH /api/v1/user/customer/update_profile
+
+PATCH /api/v1/user/transporter/update_account_details
+PATCH /api/v1/user/transporter/update_avatar
+PATCH /api/v1/user/transporter/update_profile
+
+PATCH /api/v1/user/company/update_account_details
+PATCH /api/v1/user/company/update_avatar
+
+PATCH /api/v1/user/staff/update_account_details
+PATCH /api/v1/user/staff/update_avatar
+
+PATCH /api/v1/user/regional_admin/update_account_details
+PATCH /api/v1/user/regional_admin/update_avatar
+```
+
+---
+
+## 📝 Update Account Details
+
+Update basic user information like name and phone number.
+
+**Endpoint:** `PATCH /api/v1/user/{role}/update_account_details`
+
+**Auth:** Required ✅
+
+**Request Body:**
+```json
+{
+  "first_name": "Jane",
+  "last_name": "Doe",
+  "phone_number": "+919876543210"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Account details updated successfully",
+  "data": {
+    "user": {
+      "_id": "user_id",
+      "first_name": "Jane",
+      "last_name": "Doe",
+      "email": "jane@example.com",
+      "phone_number": "+919876543210"
+    }
+  }
+}
+```
+
+### JavaScript Example
 
 ```javascript
-const API_BASE_URL = 'http://localhost:8000/api/v1';
-
-const apiClient = {
-  async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const accessToken = localStorage.getItem('access_token');
-    
-    const headers = {
+async function updateAccountDetails(token, firstName, lastName, phone) {
+  const response = await fetch('http://localhost:8000/api/v1/user/customer/update_account_details', {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options.headers,
-    };
-    
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-    
-    const response = await fetch(url, {
-      ...options,
-      headers,
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'API request failed');
-    }
-    
-    return data;
-  },
-  
-  get(endpoint) {
-    return this.request(endpoint, { method: 'GET' });
-  },
-  
-  post(endpoint, body) {
-    return this.request(endpoint, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-  },
-  
-  patch(endpoint, body) {
-    return this.request(endpoint, {
+    },
+    body: JSON.stringify({
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phone,
+    }),
+  });
+
+  const data = await response.json();
+  if (data.success) {
+    console.log('Account updated:', data.data.user);
+  } else {
+    console.error('Update failed:', data.message);
+  }
+  return data;
+}
+```
+
+### React Example
+
+```jsx
+import { useState } from 'react';
+
+export function UpdateAccountForm() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const token = localStorage.getItem('access_token');
+    const response = await fetch('http://localhost:8000/api/v1/user/customer/update_account_details', {
       method: 'PATCH',
-      body: JSON.stringify(body),
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phone,
+      }),
     });
-  },
-  
-  delete(endpoint) {
-    return this.request(endpoint, { method: 'DELETE' });
-  },
-};
-```
 
----
+    const data = await response.json();
+    setLoading(false);
 
-## 👤 Customer Integration
+    if (data.success) {
+      alert('Account updated successfully');
+    } else {
+      alert('Error: ' + data.message);
+    }
+  };
 
-### Step 1: Fetch Customer Profile
-
-```javascript
-async function loadCustomerProfile() {
-  try {
-    const response = await apiClient.get('/users/customers/profile');
-    
-    const {
-      vehicles,
-      addresses,
-      preferences,
-      stats,
-      subscriptionPlan,
-      paymentMethods,
-    } = response.data.profile;
-    
-    // Store in state management (Redux, Zustand, etc.)
-    store.dispatch(setCustomerProfile({
-      vehicles,
-      addresses,
-      preferences,
-      stats,
-      subscriptionPlan,
-      paymentMethods,
-    }));
-    
-    return response.data.profile;
-  } catch (error) {
-    console.error('Failed to load profile:', error);
-    throw error;
-  }
+  return (
+    <form onSubmit={handleSubmit}>
+      <input 
+        type="text" 
+        value={firstName} 
+        onChange={(e) => setFirstName(e.target.value)} 
+        placeholder="First Name"
+      />
+      <input 
+        type="text" 
+        value={lastName} 
+        onChange={(e) => setLastName(e.target.value)} 
+        placeholder="Last Name"
+      />
+      <input 
+        type="tel" 
+        value={phone} 
+        onChange={(e) => setPhone(e.target.value)} 
+        placeholder="Phone Number"
+      />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Updating...' : 'Update Account'}
+      </button>
+    </form>
+  );
 }
 ```
 
-### Step 2: Add Vehicle UI
+### Flutter/Dart Example
 
-```javascript
-async function addVehicle(vehicleData) {
-  try {
-    const response = await apiClient.post('/users/customers/vehicles', {
-      type: vehicleData.type,
-      make: vehicleData.make,
-      model: vehicleData.model,
-      registrationNumber: vehicleData.registrationNumber,
-      color: vehicleData.color,
-      manufacturingYear: vehicleData.year,
-      batteryCapacity: vehicleData.batteryCapacity,
-      batteryType: vehicleData.batteryType,
-      isDefault: vehicleData.isDefault || false,
-    });
-    
-    // Show success toast
-    Toast.success('Vehicle added successfully');
-    
-    // Refresh profile
-    await loadCustomerProfile();
-    
-    return response.data.vehicle;
-  } catch (error) {
-    Toast.error(error.message || 'Failed to add vehicle');
-    throw error;
-  }
-}
-```
+```dart
+Future<Map<String, dynamic>> updateAccountDetails({
+  required String token,
+  required String firstName,
+  required String lastName,
+  required String phoneNumber,
+}) async {
+  final response = await http.patch(
+    Uri.parse('http://YOUR_IP:8000/api/v1/user/customer/update_account_details'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'first_name': firstName,
+      'last_name': lastName,
+      'phone_number': phoneNumber,
+    }),
+  );
 
-### Step 3: Update Preferences
-
-```javascript
-async function updatePreferences(preferences) {
-  try {
-    const response = await apiClient.patch(
-      '/users/customers/preferences',
-      {
-        enableNotifications: preferences.notifications,
-        notificationChannels: preferences.channels,
-        theme: preferences.theme,
-        maxWaitTimeMinutes: preferences.maxWaitTime,
-        maxDistanceKm: preferences.maxDistance,
-        autoJoinQueue: preferences.autoJoin,
-        // ... other preferences
-      }
-    );
-    
-    Toast.success('Preferences updated');
-    store.dispatch(setPreferences(response.data.preferences));
-    
-    return response.data.preferences;
-  } catch (error) {
-    Toast.error('Failed to update preferences');
-    throw error;
-  }
-}
-```
-
-### Step 4: Delete Address
-
-```javascript
-async function deleteAddress(addressId) {
-  try {
-    await apiClient.delete(`/users/customers/addresses/${addressId}`);
-    Toast.success('Address deleted');
-    await loadCustomerProfile();
-  } catch (error) {
-    Toast.error('Failed to delete address');
-    throw error;
-  }
-}
-```
-
-### Step 5: Update Subscription
-
-```javascript
-async function upgradeSubscription(plan) {
-  try {
-    const response = await apiClient.patch(
-      '/users/customers/profile',
-      { subscriptionPlan: plan }
-    );
-    
-    Toast.success(`Upgraded to ${plan} plan`);
-    store.dispatch(setSubscriptionPlan(plan));
-    
-    return response.data.profile;
-  } catch (error) {
-    Toast.error('Failed to upgrade subscription');
-    throw error;
-  }
+  return jsonDecode(response.body);
 }
 ```
 
 ---
 
-## 🚛 Transporter Integration
+## 🖼️ Upload Avatar
 
-### Step 1: Fetch Transporter Profile
+Upload a profile picture. Only supports image files.
 
-```javascript
-async function loadTransporterProfile() {
-  try {
-    const response = await apiClient.get('/users/transporters/profile');
-    
-    const profile = response.data.profile;
-    
-    store.dispatch(setTransporterProfile({
-      tier: profile.tier,
-      stats: profile.stats,
-      verification: profile.verification,
-      transportVehicle: profile.transportVehicle,
-      bankDetails: profile.bankDetails,
-      preferences: profile.preferences,
-      isAvailable: profile.isAvailable,
-      isOnline: profile.isOnline,
-      walletBalance: profile.walletBalance,
-      certifications: profile.certifications,
-      emergencyContact: profile.emergencyContact,
-    }));
-    
-    return profile;
-  } catch (error) {
-    console.error('Failed to load transporter profile:', error);
-    throw error;
+**Endpoint:** `PATCH /api/v1/user/{role}/update_avatar`
+
+**Auth:** Required ✅
+
+**Content-Type:** `multipart/form-data`
+
+**Form Data:**
+- Key: `avatar`
+- Value: Image file (JPEG, PNG, GIF, WebP, etc.)
+
+**Response (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Avatar updated successfully",
+  "data": {
+    "avatar_url": "https://example.com/avatars/user_123.jpg"
   }
 }
 ```
 
-### Step 2: Update Bank Details
+### JavaScript Example
 
 ```javascript
-async function updateBankDetails(bankData) {
-  try {
-    const response = await apiClient.patch(
-      '/users/transporters/profile',
-      {
-        bankDetails: {
-          bankName: bankData.bankName,
-          accountHolderName: bankData.accountHolderName,
-          accountNumber: bankData.accountNumber,
-          ifscCode: bankData.ifscCode,
-          isDefault: true,
-        },
-      }
-    );
-    
-    Toast.success('Bank details updated');
-    store.dispatch(updateTransporterBankDetails(response.data.profile.bankDetails));
-    
-    return response.data.profile;
-  } catch (error) {
-    Toast.error('Failed to update bank details');
-    throw error;
+async function uploadAvatar(token, file) {
+  const formData = new FormData();
+  formData.append('avatar', file);
+
+  const response = await fetch('http://localhost:8000/api/v1/user/customer/update_avatar', {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      // Do NOT set Content-Type — browser handles it with multipart/form-data
+    },
+    body: formData,
+  });
+
+  return response.json();
+}
+```
+
+### React Example with File Input
+
+```jsx
+import { useState } from 'react';
+
+export function AvatarUpload() {
+  const [loading, setLoading] = useState(false);
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    setLoading(true);
+    const token = localStorage.getItem('access_token');
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch('http://localhost:8000/api/v1/user/customer/update_avatar', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    const data = await response.json();
+    setLoading(false);
+
+    if (data.success) {
+      alert('Avatar uploaded successfully');
+      console.log('Avatar URL:', data.data.avatar_url);
+    } else {
+      alert('Error: ' + data.message);
+    }
+  };
+
+  return (
+    <div>
+      <input 
+        type="file" 
+        accept="image/*" 
+        onChange={handleFileChange}
+        disabled={loading}
+      />
+      {loading && <p>Uploading...</p>}
+    </div>
+  );
+}
+```
+
+### React Native Example
+
+```javascript
+import * as ImagePicker from 'expo-image-picker';
+
+async function pickAndUploadAvatar(token) {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+  });
+
+  if (!result.canceled) {
+    const formData = new FormData();
+    formData.append('avatar', {
+      uri: result.assets[0].uri,
+      name: 'avatar.jpg',
+      type: 'image/jpeg',
+    });
+
+    const response = await fetch('http://YOUR_IP:8000/api/v1/user/customer/update_avatar', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return response.json();
   }
 }
 ```
 
-### Step 3: Toggle Availability
+### Flutter/Dart Example
 
-```javascript
-async function toggleAvailability(isAvailable, isOnline) {
-  try {
-    const response = await apiClient.patch(
-      '/users/transporters/availability',
-      {
-        isAvailable,
-        isOnline,
-      }
-    );
-    
-    // Show instant feedback
-    Toast.success(
-      isAvailable 
-        ? 'You are now available for tasks' 
-        : 'You are now offline'
-    );
-    
-    store.dispatch(setTransporterAvailability({
-      isAvailable,
-      isOnline,
-    }));
-    
-    return response.data;
-  } catch (error) {
-    Toast.error('Failed to update availability');
-    throw error;
+```dart
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+
+Future<Map<String, dynamic>> uploadAvatar(File imageFile, String token) async {
+  final request = http.MultipartRequest(
+    'PATCH',
+    Uri.parse('http://YOUR_IP:8000/api/v1/user/customer/update_avatar'),
+  );
+
+  request.headers['Authorization'] = 'Bearer $token';
+  request.files.add(
+    await http.MultipartFile.fromPath('avatar', imageFile.path),
+  );
+
+  final response = await request.send();
+  final responseBody = await response.stream.bytesToString();
+
+  return jsonDecode(responseBody);
+}
+
+// Usage with image picker
+Future<void> pickAndUploadAvatar(String token) async {
+  final ImagePicker picker = ImagePicker();
+  final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+
+  if (image != null) {
+    final result = await uploadAvatar(File(image.path), token);
+    if (result['success']) {
+      print('Avatar updated: ${result['data']['avatar_url']}');
+    }
   }
 }
 ```
 
-### Step 4: Add Certification
+---
 
-```javascript
-async function addCertification(certData) {
-  try {
-    const response = await apiClient.post(
-      '/users/transporters/certifications',
-      {
-        name: certData.name,
-        issuedAt: certData.issuedAt,
-        expiresAt: certData.expiresAt,
-      }
-    );
-    
-    Toast.success('Certification added');
-    await loadTransporterProfile();
-    
-    return response.data.certification;
-  } catch (error) {
-    Toast.error('Failed to add certification');
-    throw error;
+## 📋 Update Profile (Customer & Transporter Only)
+
+Update detailed profile information beyond basic account details.
+
+**Endpoint:** `PATCH /api/v1/user/{role}/update_profile`
+
+**Auth:** Required ✅
+
+**Role:** Customer or Transporter only
+
+**Request Body Example:**
+```json
+{
+  "bio": "I love electric vehicles",
+  "gender": "male",
+  "dateOfBirth": "1990-01-15"
+}
+```
+
+**Response (Success - 200):**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "profile": {
+      "bio": "I love electric vehicles",
+      "gender": "male",
+      "dateOfBirth": "1990-01-15",
+      "profileCompleted": true
+    }
   }
 }
 ```
 
-### Step 5: Check Verification Status
+### JavaScript Example
 
 ```javascript
-async function checkVerificationStatus() {
-  try {
-    const response = await apiClient.get(
-      '/users/transporters/verification'
-    );
-    
-    const { idVerification, vehicleVerification, backgroundCheck } = 
-      response.data.verification;
-    
-    // Show verification status in UI
-    return {
-      idVerification,     // approved|pending|rejected
-      vehicleVerification, // approved|pending|rejected
-      backgroundCheck,    // approved|pending|rejected
-    };
-  } catch (error) {
-    console.error('Failed to check verification:', error);
-    throw error;
-  }
+async function updateCustomerProfile(token, profileData) {
+  const response = await fetch('http://localhost:8000/api/v1/user/customer/update_profile', {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  return response.json();
+}
+
+// Usage
+const result = await updateCustomerProfile(token, {
+  bio: 'Electric vehicle enthusiast',
+  gender: 'female',
+  dateOfBirth: '1992-03-15',
+});
+```
+
+### React Example
+
+```jsx
+import { useState } from 'react';
+
+export function UpdateProfileForm() {
+  const [bio, setBio] = useState('');
+  const [gender, setGender] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const token = localStorage.getItem('access_token');
+    const response = await fetch('http://localhost:8000/api/v1/user/customer/update_profile', {
+      method: 'PATCH',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        bio,
+        gender,
+        dateOfBirth,
+      }),
+    });
+
+    const data = await response.json();
+    setLoading(false);
+
+    if (data.success) {
+      alert('Profile updated successfully');
+    } else {
+      alert('Error: ' + data.message);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <textarea
+        value={bio}
+        onChange={(e) => setBio(e.target.value)}
+        placeholder="Your bio"
+      />
+      <select value={gender} onChange={(e) => setGender(e.target.value)}>
+        <option value="">Select Gender</option>
+        <option value="male">Male</option>
+        <option value="female">Female</option>
+        <option value="other">Other</option>
+      </select>
+      <input
+        type="date"
+        value={dateOfBirth}
+        onChange={(e) => setDateOfBirth(e.target.value)}
+      />
+      <button type="submit" disabled={loading}>
+        {loading ? 'Updating...' : 'Update Profile'}
+      </button>
+    </form>
+  );
+}
+```
+
+### Flutter/Dart Example
+
+```dart
+Future<Map<String, dynamic>> updateCustomerProfile({
+  required String token,
+  required String bio,
+  required String gender,
+  required String dateOfBirth, // Format: YYYY-MM-DD
+}) async {
+  final response = await http.patch(
+    Uri.parse('http://YOUR_IP:8000/api/v1/user/customer/update_profile'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'bio': bio,
+      'gender': gender,
+      'dateOfBirth': dateOfBirth,
+    }),
+  );
+
+  return jsonDecode(response.body);
 }
 ```
 
@@ -358,288 +535,145 @@ async function checkVerificationStatus() {
 
 ## ❌ Error Handling
 
-### Generic Error Handler
+Common error codes and how to handle them:
+
+| Status Code | Error | Solution |
+|----------|-------|----------|
+| 400 | Bad Request | Check request body format and required fields |
+| 401 | Unauthorized | Token expired or invalid. Re-login to get new token |
+| 404 | Not Found | User not found in database |
+| 413 | Payload Too Large | File/data size exceeds limit |
+| 500 | Server Error | Try again later |
+
+### Error Handling Example
 
 ```javascript
-async function handleApiError(error) {
-  if (error instanceof Error) {
-    // Network error
-    if (!navigator.onLine) {
-      Toast.error('No internet connection');
-      return;
+async function handleApiCall(endpoint, method, data, token) {
+  try {
+    const response = await fetch(`http://localhost:8000${endpoint}`, {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': method === 'PATCH' ? 'application/json' : undefined,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      // Handle specific error codes
+      switch (response.status) {
+        case 400:
+          console.error('Validation Error:', result.message);
+          break;
+        case 401:
+          console.error('Token expired, redirecting to login');
+          localStorage.removeItem('access_token');
+          window.location.href = '/login';
+          break;
+        case 404:
+          console.error('User not found');
+          break;
+        default:
+          console.error('Error:', result.message);
+      }
+      return { success: false, error: result.message };
     }
-    
-    // API error
-    const data = error.response?.data;
-    if (data?.message) {
-      Toast.error(data.message);
-    } else {
-      Toast.error('Something went wrong. Please try again.');
-    }
+
+    return result;
+  } catch (error) {
+    console.error('Network error:', error);
+    return { success: false, error: 'Network error' };
   }
 }
 ```
 
-### Specific Error Cases
+---
+
+## 💻 Complete Usage Example
 
 ```javascript
-async function updateProfileWithErrorHandling(updates) {
-  try {
-    const response = await apiClient.patch(
-      '/users/customers/profile',
-      updates
+const API_BASE = 'http://localhost:8000/api/v1';
+
+class UserProfileManager {
+  constructor(token) {
+    this.token = token;
+  }
+
+  async updateAccountDetails(firstName, lastName, phone) {
+    const response = await fetch(
+      `${API_BASE}/user/customer/update_account_details`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          phone_number: phone,
+        }),
+      }
     );
-    return response.data.profile;
-  } catch (error) {
-    // Handle specific errors
-    if (error.status === 401) {
-      // Token expired - redirect to login
-      window.location.href = '/login';
-    } else if (error.status === 400) {
-      // Validation error - show specific field errors
-      Array.isArray(error.errors)
-        ? error.errors.forEach(err => Toast.error(err))
-        : Toast.error(error.message);
-    } else if (error.status === 404) {
-      // User not found
-      Toast.error('User profile not found');
-    } else {
-      // Generic error
-      Toast.error('Failed to update profile');
-    }
-    throw error;
+    return response.json();
   }
-}
-```
 
----
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
 
-## 📘 TypeScript Definitions
+    const response = await fetch(
+      `${API_BASE}/user/customer/update_avatar`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+        },
+        body: formData,
+      }
+    );
+    return response.json();
+  }
 
-```typescript
-// Customer Profile Types
-interface Vehicle {
-  id: string;
-  userId: string;
-  type: 'ev' | 'car' | 'bike' | 'truck' | 'other';
-  make: string;
-  model: string;
-  registrationNumber: string;
-  color: string;
-  manufacturingYear: number;
-  batteryCapacity?: number;
-  batteryType?: string;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface Address {
-  id: string;
-  userId: string;
-  label: 'Home' | 'Work' | 'Other';
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-  isDefault: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface CustomerPreferences {
-  enableNotifications: boolean;
-  enableLocationServices: boolean;
-  enableAIRecommendations: boolean;
-  notificationChannels: string[];
-  autoJoinQueue: boolean;
-  maxWaitTimeMinutes: number;
-  maxDistanceKm: number;
-  preferredStations: string[];
-  languageCode: string;
-  theme: 'light' | 'dark' | 'auto';
-  showNearbyStationsOnMap: boolean;
-  saveSwapHistory: boolean;
-}
-
-interface CustomerStats {
-  totalSwaps: number;
-  totalSpent: number;
-  favoriteStationCount: number;
-  averageWaitTime: number;
-  reliabilityScore: number;
-  streakDays: number;
-}
-
-interface CustomerProfile {
-  vehicles: Vehicle[];
-  addresses: Address[];
-  preferences: CustomerPreferences;
-  stats: CustomerStats;
-  subscriptionPlan: 'free' | 'basic' | 'premium' | 'enterprise';
-  subscriptionExpiresAt?: string;
-  paymentMethods: PaymentMethod[];
-}
-
-// Transporter Profile Types
-interface TransporterStats {
-  totalEarnings: number;
-  totalDeliveries: number;
-  efficiencyScore: number;
-  onTimePercentage: number;
-  todayDeliveries: number;
-  todayEarnings: number;
-  averageRating: number;
-  totalRatings: number;
-  cancelledTasks: number;
-  rejectedTasks: number;
-}
-
-interface TransporterVerification {
-  idVerification: 'pending' | 'approved' | 'rejected' | 'expired';
-  vehicleVerification: 'pending' | 'approved' | 'rejected' | 'expired';
-  backgroundCheck: 'pending' | 'approved' | 'rejected' | 'expired';
-}
-
-interface BankDetails {
-  id: string;
-  userId: string;
-  bankName: string;
-  accountHolderName: string;
-  accountNumber: string;
-  ifscCode: string;
-  isDefault: boolean;
-  createdAt: string;
-}
-
-interface TransporterProfile {
-  tier: 'bronze' | 'silver' | 'gold' | 'platinum';
-  stats: TransporterStats;
-  verification: TransporterVerification;
-  transportVehicle?: Vehicle;
-  bankDetails?: BankDetails;
-  preferences: TransporterPreferences;
-  isAvailable: boolean;
-  isOnline: boolean;
-  walletBalance: number;
-  certifications: Certification[];
-  emergencyContact?: EmergencyContact;
-}
-
-// API Response Types
-interface ApiResponse<T> {
-  status_code: number;
-  message: string;
-  data: T;
-  success: boolean;
-  errors?: string[];
-}
-
-interface ProfileResponse {
-  profile: CustomerProfile | TransporterProfile;
-}
-```
-
----
-
-## 🧪 Testing Integration
-
-```javascript
-// Test customer profile update
-async function testCustomerProfileIntegration() {
-  try {
-    // 1. Get profile
-    let profile = await loadCustomerProfile();
-    console.log('✓ Profile loaded:', profile);
-    
-    // 2. Add vehicle
-    const vehicle = await addVehicle({
-      type: 'ev',
-      make: 'Tesla',
-      model: 'Model 3',
-      registrationNumber: 'MH02AB1234',
-      color: 'White',
-      year: 2023,
-      batteryCapacity: 75,
-    });
-    console.log('✓ Vehicle added:', vehicle);
-    
-    // 3. Update preferences
-    const prefs = await updatePreferences({
-      notifications: true,
-      channels: ['push', 'email'],
-      theme: 'dark',
-      maxWaitTime: 45,
-    });
-    console.log('✓ Preferences updated:', prefs);
-    
-    console.log('✅ All tests passed!');
-  } catch (error) {
-    console.error('❌ Test failed:', error);
+  async updateProfile(bio, gender, dateOfBirth) {
+    const response = await fetch(
+      `${API_BASE}/user/customer/update_profile`,
+      {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${this.token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bio,
+          gender,
+          dateOfBirth,
+        }),
+      }
+    );
+    return response.json();
   }
 }
 
-// Run tests
-testCustomerProfileIntegration();
+// Usage
+const token = localStorage.getItem('access_token');
+const manager = new UserProfileManager(token);
+
+// Update account
+await manager.updateAccountDetails('John', 'Doe', '+919876543210');
+
+// Upload avatar
+const file = document.getElementById('avatarInput').files[0];
+await manager.uploadAvatar(file);
+
+// Update profile (customer/transporter only)
+await manager.updateProfile('Tech enthusiast', 'male', '1990-05-15');
 ```
 
 ---
 
-## 🔍 Debugging Tips
-
-### 1. Log API Requests
-
-```javascript
-const apiClient = {
-  async request(endpoint, options = {}) {
-    console.log(`📤 ${options.method || 'GET'} ${endpoint}`, options.body);
-    const response = await fetch(...);
-    console.log(`📥 Response:`, response.json());
-    return data;
-  },
-};
-```
-
-### 2. Check Token Expiry
-
-```javascript
-function checkTokenExpiry() {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    const expiryTime = payload.exp * 1000;
-    const now = Date.now();
-    console.log(`Token expires in ${Math.round((expiryTime - now) / 1000)}s`);
-  }
-}
-```
-
-### 3. Monitor Network Tab
-
-Open DevTools > Network tab to see:
-- Request headers (Authorization)
-- Request body (payload)
-- Response status and data
-- Response headers
-
----
-
-## 📞 Common Issues & Solutions
-
-| Issue | Solution |
-|-------|----------|
-| `401 Unauthorized` | Token missing/expired. Refresh token or re-login |
-| `400 Bad Request` | Check request payload format |
-| `404 Not Found` | Check endpoint URL and user ID |
-| `CORS Error` | Ensure backend CORS is configured |
-| `Network Timeout` | Check backend server is running |
-
----
-
-**Last Updated:** March 14, 2026  
-**Version:** 1.0.0
-
+**Last Updated:** March 15, 2026  
+**Version:** 1.1.0  
+**Status:** ✅ All endpoints documented and verified against live codebase

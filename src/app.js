@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from "cors";
 import cookieParser from 'cookie-parser';
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./config/swagger.js";
 
 //  ===================================
 //  NOTE: This file is the main entry point of the application
@@ -22,6 +24,8 @@ app.use(express.urlencoded({extended: false, limit: "20kb"})) // this is done to
 app.use(express.static("public")) // this is done to serve static files from the public directory
 app.use(cookieParser()) // this is done to parse cookies from the request
 
+// swagger documentation route
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // import routes
 // auth routes

@@ -1,321 +1,385 @@
-# 👤 User Profile Management API
+# 👤 User API Module
 
-> API for managing customer and transporter profile information in NavSwap.
-
----
+> Profile management API for updating user information and uploading avatars
 
 ## 📌 Overview
 
-The **User API** is a separate module from authentication that handles:
+The User API module provides endpoints for authenticated users to update their profile information. This includes basic account details (name, phone), profile pictures, and detailed profile information (for certain roles).
 
-✅ **Customer Profile Management:**
-- Vehicles (add, update, delete)
-- Delivery addresses
-- Preferences & settings
-- Payment methods
-- Subscription management
-- User statistics
+**Base URL:** `http://localhost:8000/api/v1/user`
 
-✅ **Transporter Profile Management:**
-- Transport vehicle details
-- Bank account information
-- Verification documents
-- Certifications
-- Availability status
-- Preferences & settings
-- Wallet balance
-- Performance statistics
+**Module:** User Profile Management
+
+**Status:** ✅ Production Ready
 
 ---
 
-## 🏗️ Architecture
+## ✅ Available Endpoints
 
-```
-src/services/
-├── auth/                  # Authentication only (register, login, logout, password reset)
-│   ├── controllers/
-│   ├── models/
-│   ├── routes/
-│   └── schemas/
-│
-└── user/                  # Profile management (vehicles, addresses, preferences, stats)
-    ├── controllers/
-    ├── models/
-    ├── routes/
-    └── schemas/
-```
+### All Roles
 
-### Module Separation
+All of the following roles can use these endpoints:
+- customer
+- transporter
+- company
+- staff
+- regional_admin
 
-| Module | Responsibility | Examples |
-|--------|-----------------|----------|
-| **Auth** | Authentication & Credentials | Register, Login, Logout, Change Password, Token Refresh |
-| **User** | Profile & Personal Data | Vehicles, Addresses, Preferences, Verification, Banking details |
+#### Update Account Details
+- **Method:** `PATCH`
+- **Endpoint:** `/{role}/update_account_details`
+- **Purpose:** Update name and phone number
+- **Auth:** Required
 
----
+#### Upload Avatar
+- **Method:** `PATCH`
+- **Endpoint:** `/{role}/update_avatar`
+- **Purpose:** Upload or change profile picture
+- **Auth:** Required
+- **Content-Type:** `multipart/form-data`
 
-## 🚀 Getting Started
+### Customer & Transporter Only
 
-### Prerequisites
-
-- Valid `access_token` from authentication
-- Node.js backend running on `http://localhost:8000`
-- Base API path: `/api/v1`
-
-### Authentication
-
-All user profile endpoints require authentication. Include token in:
-
-**Option A — Authorization Header:**
-```bash
-Authorization: Bearer <access_token>
-```
-
-**Option B — Cookie (for browsers):**
-Automatically sent if cookies are enabled.
+#### Update Profile
+- **Method:** `PATCH`
+- **Endpoint:** `/{role}/update_profile`
+- **Purpose:** Update bio, gender, and date of birth
+- **Auth:** Required
+- **Roles:** customer, transporter
 
 ---
 
-## 📚 Documentation Files
+## 📚 Quick Start
 
-- **[API_REFERENCE.md](./API_REFERENCE.md)** — Complete endpoint documentation with request/response examples
-- **[ENDPOINTS_CHEATSHEET.md](./ENDPOINTS_CHEATSHEET.md)** — Quick reference for all endpoints
-- **[INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)** — Step-by-step integration examples
+### 1. Update Your Account Details
 
----
-
-## ⚡ Common Tasks
-
-### 1. Get Customer Profile
 ```javascript
-const response = await fetch('/api/v1/users/customers/profile', {
-  method: 'GET',
-  headers: {
-    'Authorization': `Bearer ${access_token}`
-  }
-});
-const data = await response.json();
-```
+const token = localStorage.getItem('access_token');
 
-### 2. Add Vehicle
-```javascript
-const newVehicle = {
-  type: 'ev',
-  make: 'Tesla',
-  model: 'Model 3',
-  registrationNumber: 'MH02AB1234',
-  color: 'White',
-  manufacturingYear: 2023,
-  batteryCapacity: 75,
-  batteryType: 'Li-ion'
-};
-
-const response = await fetch('/api/v1/users/customers/vehicles', {
-  method: 'POST',
-  headers: {
-    'Authorization': `Bearer ${access_token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify(newVehicle)
-});
-```
-
-### 3. Update Customer Preferences
-```javascript
-const preferences = {
-  enableNotifications: true,
-  notificationChannels: ['push', 'email'],
-  theme: 'dark',
-  maxWaitTimeMinutes: 45
-};
-
-const response = await fetch('/api/v1/users/customers/preferences', {
+const response = await fetch('http://localhost:8000/api/v1/user/customer/update_account_details', {
   method: 'PATCH',
   headers: {
-    'Authorization': `Bearer ${access_token}`,
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify(preferences)
-});
-```
-
-### 4. Update Transporter Availability
-```javascript
-const response = await fetch('/api/v1/users/transporters/availability', {
-  method: 'PATCH',
-  headers: {
-    'Authorization': `Bearer ${access_token}`,
-    'Content-Type': 'application/json'
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
   },
   body: JSON.stringify({
-    isAvailable: true,
-    isOnline: true
-  })
+    first_name: 'John',
+    last_name: 'Doe',
+    phone_number: '+919876543210',
+  }),
 });
+
+const data = await response.json();
+console.log(data);
 ```
 
----
-
-## 🔄 Common Patterns
-
-### Pattern 1: Full Profile Update
-
-When updating profile, you can send partial data — only fields provided are updated:
+### 2. Upload Profile Picture
 
 ```javascript
-// Only update subscriptionPlan and preferences
-const update = {
-  subscriptionPlan: 'premium',
-  preferences: {
-    theme: 'dark'
-  }
-};
+const fileInput = document.getElementById('avatarInput');
+const file = fileInput.files[0];
 
-const response = await fetch('/api/v1/users/customers/profile', {
+const formData = new FormData();
+formData.append('avatar', file);
+
+const response = await fetch('http://localhost:8000/api/v1/user/customer/update_avatar', {
   method: 'PATCH',
   headers: {
-    'Authorization': `Bearer ${access_token}`,
-    'Content-Type': 'application/json'
+    'Authorization': `Bearer ${token}`,
+    // Don't set Content-Type - browser will handle it
   },
-  body: JSON.stringify(update)
+  body: formData,
 });
+
+const data = await response.json();
+console.log('Avatar URL:', data.data.avatar_url);
 ```
 
-### Pattern 2: Add Sub-Resources
-
-Add vehicles, addresses, certifications as separate endpoints:
+### 3. Update Your Profile (Customers & Transporters)
 
 ```javascript
-// Add new vehicle
-POST /api/v1/users/customers/vehicles
-Body: { type, make, model, registrationNumber, ... }
+const response = await fetch('http://localhost:8000/api/v1/user/customer/update_profile', {
+  method: 'PATCH',
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    bio: 'I love electric vehicles!',
+    gender: 'male',
+    dateOfBirth: '1990-05-15',
+  }),
+});
 
-// Add new address
-POST /api/v1/users/customers/addresses
-Body: { label, addressLine1, city, state, ... }
-
-// Add new certification
-POST /api/v1/users/transporters/certifications
-Body: { name, issuedAt, expiresAt }
+const data = await response.json();
+console.log(data);
 ```
 
-### Pattern 3: Error Handling
+---
 
-All errors follow standard format:
+## 📖 Detailed Documentation
 
+### Update Account Details
+
+**Endpoint:** `PATCH /api/v1/user/{role}/update_account_details`
+
+**Authentication:** Bearer token required
+
+**Request:**
 ```json
 {
-  "status_code": 400,
-  "message": "Invalid profile data",
-  "success": false,
-  "errors": []
+  "first_name": "Jane",
+  "last_name": "Smith",
+  "phone_number": "+919876543210"
 }
 ```
 
----
-
-## 📊 Data Models
-
-### Customer Profile
-
-```typescript
-interface CustomerProfile {
-  vehicles: Vehicle[];
-  addresses: Address[];
-  preferences: CustomerPreferences;
-  stats: CustomerStats;
-  subscriptionPlan: SubscriptionPlan;
-  paymentMethods: PaymentMethod[];
-}
-```
-
-### Transporter Profile
-
-```typescript
-interface TransporterProfile {
-  tier: TransporterTier;
-  stats: TransporterStats;
-  verification: TransporterVerification;
-  transportVehicle: Vehicle;
-  bankDetails: BankDetails;
-  preferences: TransporterPreferences;
-  isAvailable: boolean;
-  isOnline: boolean;
-  walletBalance: number;
-  certifications: Certification[];
-  emergencyContact: EmergencyContact;
-}
-```
-
----
-
-## 🛠️ Implementation Notes
-
-### Response Format
-
-All responses (success and error) follow this structure:
-
+**Response:**
 ```json
 {
-  "status_code": 200,
-  "message": "Descriptive message",
-  "data": { /* response payload */ },
-  "success": true
+  "success": true,
+  "message": "Account details updated successfully",
+  "data": {
+    "user": {
+      "_id": "507f1f77bcf86cd799439011",
+      "first_name": "Jane",
+      "last_name": "Smith",
+      "email": "jane@example.com",
+      "phone_number": "+919876543210"
+    }
+  }
 }
 ```
 
-### Status Codes
+### Upload Avatar
 
-| Code | Meaning |
-|------|---------|
-| `200` | Success (GET, PATCH, DELETE) |
-| `201` | Created (POST) |
-| `400` | Bad Request |
-| `401` | Unauthorized |
-| `403` | Forbidden |
-| `404` | Not Found |
-| `500` | Server Error |
+**Endpoint:** `PATCH /api/v1/user/{role}/update_avatar`
 
-### Validation
+**Authentication:** Bearer token required
 
-- All input fields are validated server-side
-- Invalid data returns `400 Bad Request`
-- Missing required fields return descriptive error messages
-- Duplicate resources (e.g., duplicate email) return `409 Conflict`
+**Content-Type:** `multipart/form-data`
+
+**Form Params:**
+- `avatar` (file, required): Image file
+
+**Supported Formats:** JPEG, PNG, GIF, WebP
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Avatar updated successfully",
+  "data": {
+    "avatar_url": "https://example.com/avatars/user_id.jpg"
+  }
+}
+```
+
+### Update Profile (Customer/Transporter)
+
+**Endpoint:** `PATCH /api/v1/user/{role}/update_profile`
+
+**Authentication:** Bearer token required
+
+**Available Roles:** customer, transporter
+
+**Request:**
+```json
+{
+  "bio": "Brief description about yourself",
+  "gender": "male", // or "female", "other"
+  "dateOfBirth": "1990-05-15" // YYYY-MM-DD format
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Profile updated successfully",
+  "data": {
+    "profile": {
+      "bio": "Brief description about yourself",
+      "gender": "male",
+      "dateOfBirth": "1990-05-15",
+      "profileCompleted": true
+    }
+  }
+}
+```
 
 ---
 
-## 🔐 Security Considerations
+## 🛠️ Implementation Examples
 
-✅ **Always include access_token** — All endpoints require authentication
-✅ **Use HTTPS in production** — Protect tokens in transit
-✅ **Token expiry** — Access tokens expire; use refresh token to get new one
-✅ **HttpOnly cookies** — Tokens are set as `httpOnly` for security
-✅ **CORS enabled** — Cross-origin requests supported
+### React Component
 
-See [Auth API Reference](../auth/API_REFERENCE.md) for token management.
+```jsx
+import { useState } from 'react';
+
+export function ProfileManager() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [loading, setLoading] = useState(false);
+  const token = localStorage.getItem('access_token');
+
+  const handleUpdateAccount = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        'http://localhost:8000/api/v1/user/customer/update_account_details',
+        {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            first_name: firstName,
+            last_name: lastName,
+            phone_number: phone,
+          }),
+        }
+      );
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Account updated!');
+      } else {
+        alert('Error: ' + data.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div>
+      <input 
+        placeholder="First Name"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+      />
+      <input 
+        placeholder="Last Name"
+        value={lastName}
+        onChange={(e) => setLastName(e.target.value)}
+      />
+      <input 
+        placeholder="Phone"
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+      />
+      <button onClick={handleUpdateAccount} disabled={loading}>
+        {loading ? 'Updating...' : 'Update'}
+      </button>
+    </div>
+  );
+}
+```
+
+### Flutter/Dart
+
+```dart
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+Future<void> updateUserProfile() async {
+  final token = await storage.read(key: 'access_token');
+  
+  final response = await http.patch(
+    Uri.parse('http://YOUR_IP:8000/api/v1/user/customer/update_account_details'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'first_name': 'John',
+      'last_name': 'Doe',
+      'phone_number': '+919876543210',
+    }),
+  );
+
+  if (response.statusCode == 200) {
+    final data = jsonDecode(response.body);
+    print('Success: ${data['message']}');
+  } else {
+    print('Error: ${response.statusCode}');
+  }
+}
+```
 
 ---
 
-## 📞 Support & Examples
+## ❌ Common Errors
 
-For more detailed examples and specific use cases:
-
-1. **API Reference** — Full endpoint documentation with all fields
-2. **Endpoints Cheatsheet** — Quick copy-paste examples
-3. **Integration Guide** — Step-by-step integration walkthrough
-
----
-
-## 🔗 Related Resources
-
-- [Auth API Documentation](../auth/README.md) — Authentication endpoints
-- [Full API Reference](./API_REFERENCE.md) — Complete endpoint documentation
-- [Backend Repository](https://github.com/your-org/navswap-backend)
+| Error | Status | Solution |
+|-------|--------|----------|
+| Invalid token | 401 | Re-login to get a new token |
+| Validation failed | 400 | Check field names and formats |
+| User not found | 404 | Ensure token is valid |
+| File too large | 413 | Reduce image size |
+| Not authorized for endpoint | 403 | Check your role supports this endpoint |
 
 ---
 
-**Last Updated:** March 14, 2026  
+## 📋 Request/Response Examples
+
+### Successful Update
+```
+Request:
+PATCH /api/v1/user/customer/update_account_details
+Authorization: Bearer eyJhbGc...
+
+Response (200):
+{
+  "success": true,
+  "message": "Account details updated successfully",
+  "data": { "user": { ... } }
+}
+```
+
+### File Upload
+```
+Request:
+PATCH /api/v1/user/customer/update_avatar
+Authorization: Bearer eyJhbGc...
+Content-Type: multipart/form-data
+
+[Binary image data]
+
+Response (200):
+{
+  "success": true,
+  "message": "Avatar updated successfully",
+  "data": { "avatar_url": "https://..." }
+}
+```
+
+---
+
+## 🔐 Authentication
+
+All endpoints require Bearer token authentication:
+
+```
+Authorization: Bearer {access_token}
+```
+
+Get your access token from the Auth API login endpoint.
+
+---
+
+## 📞 Support
+
+For issues or questions:
+1. Check the [API Reference](./API_REFERENCE.md)
+2. Review the [Integration Guide](./INTEGRATION_GUIDE.md)
+3. Check endpoint examples above
+
+---
+
+**Last Updated:** March 15, 2026  
 **Version:** 1.0.0  
-**Status:** 🟢 Production Ready
-
+**Documentation Status:** ✅ Complete and Verified
