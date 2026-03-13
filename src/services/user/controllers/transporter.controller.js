@@ -7,21 +7,21 @@ import {
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { name, email, bio, gender, dateOfBirth } = req.body;
+  const { full_name, email, bio, gender, dateOfBirth } = req.body;
 
-  if (!name || !email) {
-    throw new ApiError(400, "Name and email are required");
+  if (!full_name || !email) {
+    throw new ApiError(400, "Full Name and email are required");
   }
 
   const user = req.user;
-  user.name = name;
+  user.full_name = full_name;
   user.email = email;
   if (bio) user.bio = bio;
   if (gender) user.gender = gender;
   if (dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
 
   // Update legacy fields
-  user.full_name = name;
+  user.full_name = full_name;
 
   await user.save({ validateBeforeSave: false });
 

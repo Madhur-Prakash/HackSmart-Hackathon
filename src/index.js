@@ -14,6 +14,7 @@ connectDB()
     })
     app.listen(app_port || 8000, () => {
         console.log(`Server is running at port ${app_port}`);
+        console.log(`Documentation available at http://localhost:${app_port}/docs`);
         
     })
 })

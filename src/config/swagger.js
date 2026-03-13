@@ -1,23 +1,15 @@
-import swaggerJsdoc from "swagger-jsdoc";
+import swaggerAutogen from "swagger-autogen";
 
-const options = {
-  definition: {
-    openapi: "3.0.0",
-    info: {
-      title: "NavSwap API",
-      version: "1.0.0",
-      description: "API documentation for HackSmart backend"
-    },
-    servers: [
-      {
-        url: "http://localhost:8000/api/v1",
-      },
-    ],
+const doc = {
+  info: {
+    title: "HackSmart API",
+    description: "API Documentation",
   },
-
-  apis: ["./src/services/**/*.js"], // where swagger comments exist
+  host: "localhost:8000",
+  schemes: ["http"],
 };
 
-const swaggerSpec = swaggerJsdoc(options);
+const outputFile = "./swagger-output.json";
+const endpointsFiles = ["../../src/app.js"];
 
-export default swaggerSpec;
+swaggerAutogen()(outputFile, endpointsFiles, doc);

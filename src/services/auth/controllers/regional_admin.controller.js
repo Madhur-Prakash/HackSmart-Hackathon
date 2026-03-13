@@ -4,9 +4,13 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../../../constants.js";
 import {RegionalAdmin} from "../models/regional_admin.model.js"
-import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
-import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
+import { create_access_token,
+    create_refresh_token,
+    generateUsername,
+    isPasswordCorrect,
+    sendEmail
+} from "../../../utils/helper.js";
 
 const registerUser = asyncHandler( async (req, res) => {
     const {full_name, email, phone_number, addhar_card_number, country_code, role} = req.body

@@ -20,7 +20,8 @@
   "homepage": "https://github.com/Madhur-Prakash/HackSmart-Hackathon#readme",
   "devDependencies": {
     "nodemon": "^3.1.10",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "swagger-autogen": "^2.23.7"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

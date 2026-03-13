@@ -6,19 +6,20 @@ import { options } from "../../../constants.js";
 import { Transporter } from "../models/transporter.model.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import {
-  create_access_token,
-  create_refresh_token,
-  generateUsername,
-  isPasswordCorrect,
+    create_access_token,
+    create_refresh_token,
+    generateUsername,
+    isPasswordCorrect,
+    sendEmail,
 } from "../../../utils/helper.js";
 import { UserStatus, TransporterTier, VerificationStatus } from "../../../constants.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { name, email, phone_number, country_code, password, driving_license_number, gender, dateOfBirth, bio } = req.body;
+  const { full_name, email, phone_number, country_code, password, driving_license_number, gender, dateOfBirth, bio } = req.body;
 
   // Validate required fields
-  if ([name, email, phone_number, country_code, password, driving_license_number].some((field) => field?.trim() === "")) {
-    throw new ApiError(400, "Name, email, phone number, country code, password, and driving license are required");
+  if ([full_name, email, phone_number, country_code, password, driving_license_number].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "Full name, email, phone number, country code, password, and driving license are required");
   }
 
   if (!email.includes("@")) {
@@ -42,17 +43,17 @@ const registerUser = asyncHandler(async (req, res) => {
   // Generate username
   let user_name;
   try {
-    user_name = generateUsername(name);
+    user_name = generateUsername(full_name);
   } catch (err) {
     if (err.code === 11000) {
       console.warn("Username collision detected, retrying...");
-      user_name = generateUsername(name);
+      user_name = generateUsername(full_name);
     }
   }
 
   // Create new transporter with profile (password will be hashed by pre-save hook)
   const new_user = await Transporter.create({
-    name: name,
+    full_name: full_name,
     user_name: user_name,
     email: email,
     phone_number: phone_number,
@@ -129,7 +130,7 @@ const registerUser = asyncHandler(async (req, res) => {
     const email_subject = "Welcome to NavSwap - Your Transporter Account";
     const email_content = `
       <h1>Welcome to NavSwap!</h1>
-      <p>Dear ${name},</p>
+      <p>Dear ${full_name},</p>
       <p>Your transporter account has been successfully created.</p>
       <p>Please complete your verification process to start accepting deliveries.</p>
       <p>Best regards,<br/>NavSwap Team</p>

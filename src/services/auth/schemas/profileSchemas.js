@@ -536,7 +536,7 @@ const EmergencyContactSchema = new mongoose.Schema(
       required: true
     },
 
-    phone: {
+    phone_number: {
       type: String,
       required: true
     },
