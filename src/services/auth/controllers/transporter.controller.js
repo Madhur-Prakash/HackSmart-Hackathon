@@ -4,10 +4,6 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../../../constants.js";
 import { Transporter } from "../models/transporter.model.js";
-import {
-  uploadOnCloudinary,
-  deleteFromCloudinary,
-} from "../../../utils/cloudinary.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import {
   create_access_token,
@@ -139,7 +135,7 @@ const registerUser = asyncHandler(async (req, res) => {
       <p>Please complete your verification process to start accepting deliveries.</p>
       <p>Best regards,<br/>NavSwap Team</p>
     `;
-    // await sendEmail(email, email_subject, email_content);
+    await sendEmail(email, email_subject, email_content);
     console.log("Email would be sent to:", email);
   } catch (err) {
     console.error("Error sending email:", err);
@@ -375,167 +371,6 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, { user: user }, "Current user fetched successfully"));
 });
 
-const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { name, email, bio, gender, dateOfBirth } = req.body;
-
-  if (!name || !email) {
-    throw new ApiError(400, "Name and email are required");
-  }
-
-  const user = req.user;
-  user.name = name;
-  user.email = email;
-  if (bio) user.bio = bio;
-  if (gender) user.gender = gender;
-  if (dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
-
-  // Update legacy fields
-  user.full_name = name;
-
-  await user.save({ validateBeforeSave: false });
-
-  const user_data = user.toObject();
-  delete user_data.refresh_token;
-  delete user_data.password;
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(200, { user: user_data }, "Transporter details updated successfully")
-    );
-});
-
-const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.file?.path;
-
-  if (!avatarLocalPath) {
-    throw new ApiError(400, "Avatar is required");
-  }
-
-  const user = req.user;
-  if (!user) {
-    throw new ApiError(401, "Unauthorized request");
-  }
-
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
-
-  console.log("Avatar uploaded:", avatar);
-  if (!avatar) {
-    throw new ApiError(400, "Avatar upload failed");
-  }
-
-  if (user.profileImage) {
-    console.log("Deleting old avatar from cloudinary:", user.profileImage);
-    try {
-      await deleteFromCloudinary(user.profileImage);
-      console.log("Old avatar deleted successfully");
-    } catch (err) {
-      console.error("Error deleting old avatar:", err);
-    }
-  }
-
-  user.profileImage = avatar.url;
-  user.avatar = avatar.url; // Legacy field
-  await user.save({ validateBeforeSave: false });
-
-  const user_data = user.toObject();
-  delete user_data.password;
-  delete user_data.refresh_token;
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { user: user_data },
-        "Transporter avatar updated successfully"
-      )
-    );
-});
-
-const updateTransporterProfile = asyncHandler(async (req, res) => {
-  const user = req.user;
-  if (!user) {
-    throw new ApiError(401, "Unauthorized request");
-  }
-
-  const {
-    tier,
-    verification,
-    transportVehicle,
-    bankDetails,
-    preferences,
-    isAvailable,
-    isOnline,
-    certifications,
-    emergencyContact,
-  } = req.body;
-
-  // Initialize transporterProfile if it doesn't exist
-  if (!user.transporterProfile) {
-    user.transporterProfile = {
-      tier: TransporterTier.BRONZE,
-      stats: {},
-      verification: {},
-      preferences: {},
-      isAvailable: false,
-      isOnline: false,
-      walletBalance: 0,
-      certifications: [],
-    };
-  }
-
-  if (tier !== undefined) {
-    user.transporterProfile.tier = tier;
-  }
-  if (verification !== undefined) {
-    user.transporterProfile.verification = {
-      ...user.transporterProfile.verification,
-      ...verification,
-    };
-  }
-  if (transportVehicle !== undefined) {
-    user.transporterProfile.transportVehicle = transportVehicle;
-  }
-  if (bankDetails !== undefined) {
-    user.transporterProfile.bankDetails = bankDetails;
-  }
-  if (preferences !== undefined) {
-    user.transporterProfile.preferences = {
-      ...user.transporterProfile.preferences,
-      ...preferences,
-    };
-  }
-  if (isAvailable !== undefined) {
-    user.transporterProfile.isAvailable = isAvailable;
-  }
-  if (isOnline !== undefined) {
-    user.transporterProfile.isOnline = isOnline;
-  }
-  if (certifications !== undefined) {
-    user.transporterProfile.certifications = certifications;
-  }
-  if (emergencyContact !== undefined) {
-    user.transporterProfile.emergencyContact = emergencyContact;
-  }
-
-  user.isProfileCompleted = true;
-  await user.save({ validateBeforeSave: false });
-
-  const user_data = user.toObject();
-  delete user_data.password;
-  delete user_data.refresh_token;
-
-  return res
-    .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { user: user_data },
-        "Transporter profile updated successfully"
-      )
-    );
-});
 
 export {
   registerUser,
@@ -543,8 +378,5 @@ export {
   logoutUser,
   refresh_access_token,
   changeCurrentPassword,
-  getCurrentUser,
-  updateAccountDetails,
-  updateUserAvatar,
-  updateTransporterProfile,
+  getCurrentUser
 };

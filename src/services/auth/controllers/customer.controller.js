@@ -118,7 +118,7 @@ const registerUser = asyncHandler(async (req, res) => {
       <p>You can now start using our battery swap services.</p>
       <p>Best regards,<br/>NavSwap Team</p>
     `;
-    // await sendEmail(email, email_subject, email_content);
+    await sendEmail(email, email_subject, email_content);
     console.log("Email would be sent to:", email);
   } catch (err) {
     console.error("Error sending email:", err);

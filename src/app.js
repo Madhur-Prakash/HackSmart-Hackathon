@@ -33,10 +33,12 @@ import AuthTransporterRouter from './services/auth/routes/transporter.router.js'
 import AuthHealthCheck from "./services/auth/routes/healthcheck.router.js"
 
 // profile update routes
-import ProfileUpdateCompanyRouter from "./services/user/routes/company.router.js"
-import ProfileUpdateStaffRouter from "./services/user/routes/staff.router.js"
-import ProfileUpdateRegionalAdminRouter from "./services/user/routes/regional_admin.router.js"
-import ProfileUpdateCustomerRouter from "./services/user/routes/customer.router.js"
+import ProfileUpdateCompanyRouter from "./services/user/routes/company.router.js";
+import ProfileUpdateStaffRouter from "./services/user/routes/staff.router.js";
+import ProfileUpdateTransporterRouter from "./services/user/routes/transporter.router.js";
+import ProfileUpdateRegionalAdminRouter from "./services/user/routes/regional_admin.router.js";
+import ProfileUpdateCustomerRouter from "./services/user/routes/customer.router.js";
+import UserHealthCheck from './services/user/routes/healthcheck.router.js';
 
 
 // routes declaration
@@ -53,5 +55,7 @@ app.use("/api/v1/user/company", ProfileUpdateCompanyRouter)
 app.use("/api/v1/user/staff", ProfileUpdateStaffRouter)
 app.use("/api/v1/user/regional_admin", ProfileUpdateRegionalAdminRouter)
 app.use("/api/v1/user/customer", ProfileUpdateCustomerRouter)
+app.use("/api/v1/user/transporter", ProfileUpdateTransporterRouter)
+app.use("/api/v1/user", UserHealthCheck)
 
 export {app}
