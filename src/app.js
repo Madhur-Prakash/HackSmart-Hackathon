@@ -24,20 +24,34 @@ app.use(cookieParser()) // this is done to parse cookies from the request
 
 
 // import routes
-import companyRouter from './services/auth/routes/company.routes.js'; 
-import staffRouter from './services/auth/routes/staff.router.js';
-import regionalAdminRouter from './services/auth/routes/regional_admin.route.js';
-import customerRouter from './services/auth/routes/customer.route.js';
-import transporterRouter from './services/auth/routes/transporter.route.js';
-import AuthHealthCheck from "./services/auth/routes/healthcheck.routes.js"
+// auth routes
+import AuthCompanyRouter from './services/auth/routes/company.router.js'; 
+import AuthStaffRouter from './services/auth/routes/staff.router.js';
+import AuthRegionalAdminRouter from './services/auth/routes/regional_admin.router.js';
+import AuthCustomerRouter from './services/auth/routes/customer.router.js';
+import AuthTransporterRouter from './services/auth/routes/transporter.router.js';
+import AuthHealthCheck from "./services/auth/routes/healthcheck.router.js"
+
+// profile update routes
+import ProfileUpdateCompanyRouter from "./services/user/routes/company.router.js"
+import ProfileUpdateStaffRouter from "./services/user/routes/staff.router.js"
+import ProfileUpdateRegionalAdminRouter from "./services/user/routes/regional_admin.router.js"
+import ProfileUpdateCustomerRouter from "./services/user/routes/customer.router.js"
+
 
 // routes declaration
-app.use("/api/v1/auth/companies", companyRouter)
-app.use("/api/v1/auth/transporters", transporterRouter)
-app.use("/api/v1/auth/customers", customerRouter)
-app.use("/api/v1/auth/staff", staffRouter)
-app.use("/api/v1/auth/regional_admins", regionalAdminRouter)
+// auth routes
+app.use("/api/v1/auth/companies", AuthCompanyRouter)
+app.use("/api/v1/auth/transporters", AuthTransporterRouter)
+app.use("/api/v1/auth/customers", AuthCustomerRouter)
+app.use("/api/v1/auth/staff", AuthStaffRouter)
+app.use("/api/v1/auth/regional_admins", AuthRegionalAdminRouter)
 app.use("/api/v1/auth", AuthHealthCheck)
 
+// profile update routes
+app.use("/api/v1/user/company", ProfileUpdateCompanyRouter)
+app.use("/api/v1/user/staff", ProfileUpdateStaffRouter)
+app.use("/api/v1/user/regional_admin", ProfileUpdateRegionalAdminRouter)
+app.use("/api/v1/user/customer", ProfileUpdateCustomerRouter)
 
 export {app}

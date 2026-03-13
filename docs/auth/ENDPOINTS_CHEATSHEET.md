@@ -25,14 +25,15 @@
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| `POST` | `/customers/register` | — | `{ full_name, email, phone_number, country_code, role: "customer", driving_license_number, password }` | Register |
+| `POST` | `/customers/register` | — | `{ name, email, phone, password, gender?, dateOfBirth?, bio?, country_code? }` | Register |
 | `POST` | `/customers/login` | — | `{ email OR user_name, password }` | Login |
 | `POST` | `/customers/logout` | `access_token` | — | Logout |
 | `POST` | `/customers/refresh_access_token` | `refresh_token` | — | Refresh tokens |
 | `POST` | `/customers/change_password` | — | `{ email OR user_name, new_password, confirm_password }` | Change password |
 | `GET` | `/customers/current_user` | `access_token` | — | Get profile |
-| `PATCH` | `/customers/update_account_details` | `access_token` | `{ full_name, email }` | Update profile |
+| `PATCH` | `/customers/update_account_details` | `access_token` | `{ name, email, bio?, gender?, dateOfBirth? }` | Update profile |
 | `PATCH` | `/customers/update_avatar` | `access_token` | `form-data: avatar (file)` | Upload avatar |
+| `POST` | `/customers/update_profile` | `access_token` | `{ vehicles?, addresses?, preferences?, subscriptionPlan?, paymentMethods? }` | Update customer profile |
 
 ---
 
@@ -40,14 +41,15 @@
 
 | Method | Endpoint | Auth | Body | Description |
 |--------|----------|------|------|-------------|
-| `POST` | `/transporters/register` | — | `{ full_name, email, phone_number, country_code, role: "transporter", driving_license_number, password }` | Register |
+| `POST` | `/transporters/register` | — | `{ name, email, phone, password, driving_license_number, gender?, dateOfBirth?, bio?, country_code? }` | Register |
 | `POST` | `/transporters/login` | — | `{ email OR user_name, password }` | Login |
 | `POST` | `/transporters/logout` | `access_token` | — | Logout |
 | `POST` | `/transporters/refresh_access_token` | `refresh_token` | — | Refresh tokens |
 | `POST` | `/transporters/change_password` | — | `{ email OR user_name, new_password, confirm_password }` | Change password |
 | `GET` | `/transporters/current_user` | `access_token` | — | Get profile |
-| `PATCH` | `/transporters/update_account_details` | `access_token` | `{ full_name, email }` | Update profile |
+| `PATCH` | `/transporters/update_account_details` | `access_token` | `{ name, email, bio?, gender?, dateOfBirth? }` | Update profile |
 | `PATCH` | `/transporters/update_avatar` | `access_token` | `form-data: avatar (file)` | Upload avatar |
+| `POST` | `/transporters/update_profile` | `access_token` | `{ tier?, verification?, transportVehicle?, bankDetails?, preferences?, isAvailable?, isOnline?, certifications?, emergencyContact? }` | Update transporter profile |
 
 ---
 
@@ -132,4 +134,4 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 
 ---
 
-_Last updated: March 2, 2026_
+_Last updated: March 13, 2026_

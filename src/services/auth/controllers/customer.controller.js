@@ -3,366 +3,362 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options } from "../../../constants.js";
-import {Customer} from "../models/customer.model.js"
-import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
+import { Customer } from "../models/customer.model.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
-import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
+import {
+  create_access_token,
+  create_refresh_token,
+  generateUsername,
+  isPasswordCorrect,
+} from "../../../utils/helper.js";
+import { UserStatus } from "../../../constants.js";
 
+const registerUser = asyncHandler(async (req, res) => {
+  const { name, email, phone_number, country_code, password, gender, dateOfBirth, bio } = req.body;
 
-const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, phone_number, country_code, role, driving_license_number, password} = req.body
+  // Validate required fields
+  if ([name, email, phone_number, country_code, password].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "Name, email, phone, and password are required");
+  }
 
-    if([full_name, email, phone_number, country_code, role, driving_license_number, password].some((field) => field?.trim() === "")){
-        throw new ApiError(400, "All fields are required")
+  if (!email.includes("@")) {
+    throw new ApiError(400, "Email is not valid");
+  }
+
+  if (password.length < 6) {
+    throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  // Check if customer already exists
+  const existing_user = await Customer.findOne({ email: email });
+  if (existing_user) {
+    throw new ApiError(409, "Customer already exists with this email");
+  }
+
+  // Generate username
+  let user_name;
+  try {
+    user_name = generateUsername(name);
+  } catch (err) {
+    if (err.code === 11000) {
+      console.warn("Username collision detected, retrying...");
+      user_name = generateUsername(name);
     }
-    if (role !== "customer"){
-        throw new ApiError(400, "Invalid role")
-    }
-    if(!email.includes("@")){
-        throw new ApiError(400, "Email is not valid")
-    }
-    let user_name;
-    const existing_user = await Customer.findOne({"email": email})
-    // console.log("user:",existing_user);
-    
-    if (existing_user){
-        throw new ApiError(409, "Customer already exists with this email")
-    }
+  }
 
-    try {
-      user_name = generateUsername(full_name);
-    } catch (err) {
-      if (err.code === 11000) {
-        // Duplicate username — retry
-        console.warn("Username collision detected, retrying...");
-        return generateUsername(full_name); // This will generate a new username
-      }
-    }
+  // Hash password
+  const salt = await bcrypt.genSalt(10);
+  const hashed_password = await bcrypt.hash(password, salt);
 
-    //  insert in db
-    const new_user = await Customer.create({
-        full_name: full_name,
-        user_name: user_name,
-        email: email,
-        phone_number: phone_number,
-        country_code: country_code,
-        role: role,
-        driving_license_number: driving_license_number,
-        password: password
-    })
-    if(!new_user){
-        throw new ApiError(500, "Customer registration failed")
-    }
+  // Create new customer with profile
+  const new_user = await Customer.create({
+    name: name,
+    user_name: user_name,
+    email: email,
+    phone_number: phone_number,
+    country_code: country_code,
+    password: hashed_password,
+    status: UserStatus.PENDING,
+    gender: gender || null,
+    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
+    bio: bio || null,
+    isVerified: false,
+    isApproved: false,
+    // Initialize empty customer profile
+    customerProfile: {
+      vehicles: [],
+      addresses: [],
+      preferences: {
+        notificationsEnabled: true,
+        emailNotifications: true,
+        pushNotifications: true,
+        smsNotifications: false,
+        preferredLanguage: "en",
+        theme: "light",
+        privacyLevel: "private",
+      },
+      stats: {
+        totalSwaps: 0,
+        totalSpent: 0,
+        favoriteStationCount: 0,
+        averageWaitTime: 0,
+        reliabilityScore: 0,
+        streakDays: 0,
+      },
+      subscriptionPlan: "free",
+      paymentMethods: [],
+    },
+  });
 
-    // Remove password before sending response
-    const user_data = new_user.toObject(); // Convert mongoose document to plain object
+  if (!new_user) {
+    throw new ApiError(500, "Customer registration failed");
+  }
 
-    //  remove refresh token and password from user data
-    if(user_data.refresh_token) {
-        console.log("Removing refresh token from user data");
-        delete user_data.refresh_token; // Remove refresh token field
-    }
-    if(user_data.password) {
-        console.log("Removing password from user data");
-        delete user_data.password; // Remove password field
-    }
-    
-    // generate access and refresh token
-    const access_token = create_access_token(new_user._id, new_user.user_name);
-    console.log("Access token generated:", access_token);
-    const refresh_token = create_refresh_token(new_user._id);
-    console.log("Refresh token generated:", refresh_token);
+  // Generate tokens
+  const access_token = create_access_token(new_user._id, new_user.user_name);
+  const refresh_token = create_refresh_token(new_user._id);
 
-    //  set encryted refresh token in user document
-    const salt = await bcrypt.genSalt(10); // generate a salt
-    const hashed_refresh_token = await bcrypt.hash(refresh_token, salt); // hash the refresh token
-    new_user.refresh_token = hashed_refresh_token; // set refresh token in user document
-    await new_user.save({validateBeforeSave: false}); // save the user without validating the user schema again
+  // Hash and store refresh token
+  const hashed_refresh_token = await bcrypt.hash(refresh_token, salt);
+  new_user.refresh_token = hashed_refresh_token;
+  await new_user.save({ validateBeforeSave: false });
 
-    console.log("new_user:", user_data);
-    return res.status(201).cookie("access_token", access_token, options).cookie("refresh_token", refresh_token, options).json(
-        new ApiResponse(201, 
-            {
-                user: user_data, 
-                access_token: access_token, 
-                refresh_token: refresh_token}, 
-                "Customer registered successfully")) 
-            });     
+  // Prepare response data
+  const user_data = new_user.toObject();
+  delete user_data.refresh_token;
+  delete user_data.password;
 
+  // Send welcome email
+  try {
+    const email_subject = "Welcome to NavSwap - Your Customer Account";
+    const email_content = `
+      <h1>Welcome to NavSwap!</h1>
+      <p>Dear ${name},</p>
+      <p>Your customer account has been successfully created.</p>
+      <p>You can now start using our battery swap services.</p>
+      <p>Best regards,<br/>NavSwap Team</p>
+    `;
+    // await sendEmail(email, email_subject, email_content);
+    console.log("Email would be sent to:", email);
+  } catch (err) {
+    console.error("Error sending email:", err);
+  }
+
+  return res
+    .status(201)
+    .cookie("access_token", access_token, options)
+    .cookie("refresh_token", refresh_token, options)
+    .json(
+      new ApiResponse(
+        201,
+        {
+          user: user_data,
+          access_token: access_token,
+          refresh_token: refresh_token,
+        },
+        "Customer registered successfully"
+      )
+    );
+});
 
 const loginUser = asyncHandler(async (req, res) => {
-    const {email, user_name, password} = req.body
-    console.log("email:", email);
-    
-    if(! (user_name || email) ){
-        throw new ApiError(400, "Customer name or email is required");
+  const { email, user_name, password } = req.body;
+
+  if (!user_name && !email) {
+    throw new ApiError(400, "Customer name or email is required");
+  }
+
+  if (!password) {
+    throw new ApiError(400, "Password is required");
+  }
+
+  let user;
+
+  if (user_name) {
+    user = await Customer.findOne({ user_name: user_name });
+    if (!user) {
+      throw new ApiError(404, "Customer not found with this user name");
     }
-    if(!password){
-        throw new ApiError(400, "Password is required");
+  } else if (email) {
+    user = await Customer.findOne({ email: email });
+    if (!user) {
+      throw new ApiError(404, "Customer not found with this email");
     }
+  }
 
-    if (user_name){
-        const user = await Customer.findOne({user_name: user_name});
-        if(!user){
-            throw new ApiError(404, "Customer not found with this user name");
-        }
-        
-        const hashed_password = await isPasswordCorrect(password, user.password); 
-        if(!hashed_password){
-            throw new ApiError(401, "Invalid password");
-        }
-        // remove password and refresh token from user data
-        const user_data = user.toObject();
-        // remove refresh token field from user data before sending response
-        user_data.refresh_token ? delete user_data.refresh_token : console.log("Refresh token field is already removed from user data");
+  const is_password_correct = await isPasswordCorrect(password, user.password);
+  if (!is_password_correct) {
+    throw new ApiError(401, "Invalid password");
+  }
 
-        // remove password field from user data before sending response
-        user_data.password ? delete user_data.password : console.log("Password field is already removed from user data");
-        
-        // generate access and refresh token
-        const access_token = create_access_token(user._id, user.user_name );
-        const refresh_token = create_refresh_token(user._id);
+  // Generate tokens
+  const access_token = create_access_token(user._id, user.user_name);
+  const refresh_token = create_refresh_token(user._id);
 
-        //  set encrypted refresh token in user document
-        const salt = await bcrypt.genSalt(10); // generate a salt
-        const hashed_refresh_token = await bcrypt.hash(refresh_token, salt); // hash the refresh token
-        user.refresh_token = hashed_refresh_token; // set refresh token in user document
-        await user.save({validateBeforeSave: false}); // save the user without validating the user schema again
+  // Hash and store refresh token
+  const salt = await bcrypt.genSalt(10);
+  const hashed_refresh_token = await bcrypt.hash(refresh_token, salt);
+  user.refresh_token = hashed_refresh_token;
+  user.lastLoginAt = new Date().toLocaleString();
+  await user.save({ validateBeforeSave: false });
 
-        return res.status(200).cookie("access_token", access_token, options).cookie("refresh_token", refresh_token, options).json(
-            new ApiResponse(200, 
-                {
-                    user: user_data, 
-                    access_token: access_token, 
-                    refresh_token: refresh_token}, 
-                    "Customer logged in successfully"))
-                } 
-    else if (email){
-        const user = await Customer.findOne({email: email});
-        if(!user){
-            throw new ApiError(404, "Customer not found with this user name");
-        }
-        
-        const hashed_password = await isPasswordCorrect(password, user.password); 
-        console.log("hashed_password:", hashed_password);
-        
-        if(!hashed_password){
-            throw new ApiError(401, "Invalid password");
-        }
-        //  remove password and refresh token from user data
-        const user_data = user.toObject();
-        user_data.refresh_token ? delete user_data.refresh_token : console.log("Refresh token field is already removed from user data");
-        user_data.password ? delete user_data.password : console.log("Password field is already removed from user data");
-        
-        const access_token = create_access_token(user._id, user.user_name );
-        const refresh_token = create_refresh_token(user._id);
+  // Prepare response data
+  const user_data = user.toObject();
+  delete user_data.refresh_token;
+  delete user_data.password;
 
-        //  set encrypted refresh token in user document
-        const salt = await bcrypt.genSalt(10); // generate a salt
-        const hashed_refresh_token = await bcrypt.hash(refresh_token, salt); // hash the refresh token
-        user.refresh_token = hashed_refresh_token; // set refresh token in user document
-        await user.save({validateBeforeSave: false}); // save the user without validating the user schema again
-
-        return res.status(200).cookie("access_token", access_token, options).cookie("refresh_token", refresh_token, options).json(
-            new ApiResponse(200, 
-                {
-                    user: user_data, 
-                    access_token: access_token, 
-                    refresh_token: refresh_token}, 
-                    "Customer logged in successfully"))
-                }
-        })
-
+  return res
+    .status(200)
+    .cookie("access_token", access_token, options)
+    .cookie("refresh_token", refresh_token, options)
+    .json(
+      new ApiResponse(
+        200,
+        {
+          user: user_data,
+          access_token: access_token,
+          refresh_token: refresh_token,
+        },
+        "Customer logged in successfully"
+      )
+    );
+});
 
 const logoutUser = asyncHandler(async (req, res) => {
-    const user = req.user; // user is attached to request object by JWTVerify middleware
-    if(!user){
-        throw new ApiError(401, "Unauthorized request");
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(401, "Unauthorized request");
+  }
+
+  await Customer.findByIdAndUpdate(
+    user._id,
+    {
+      $unset: {
+        refresh_token: 1,
+      },
+    },
+    {
+      new: true,
+    }
+  );
+
+  console.log("Customer logged out successfully:", user.user_name);
+  return res
+    .status(200)
+    .clearCookie("access_token", options)
+    .clearCookie("refresh_token", options)
+    .json(new ApiResponse(200, {}, "Customer logged out successfully"));
+});
+
+const refresh_access_token = asyncHandler(async (req, res) => {
+  const incoming_refresh_token =
+    req.cookies?.refresh_token ||
+    req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!incoming_refresh_token) {
+    throw new ApiError(401, "Unauthorized request, refresh token is required");
+  }
+
+  try {
+    const decoded_info = jwt.verify(
+      incoming_refresh_token,
+      process.env.REFRESH_TOKEN_SECRET
+    );
+
+    const user = await Customer.findById(decoded_info?._id);
+    if (!user) {
+      throw new ApiError(401, "Invalid Refresh Token");
     }
 
-    await Customer.findByIdAndUpdate(
-        user._id,
-        {
-            $unset: {
-                refresh_token: 1 // this removes the field from document
-            }
-        },
-        {
-            new: true
-        }
-    )
-
-    console.log("Customer logged out successfully:", user.user_name);
-    return res.status(200).clearCookie("access_token", options).clearCookie("refresh_token", options).json(
-        new ApiResponse(200, {}, "Customer logged out successfully"))
-})
-
-
-const refresh_access_token = asyncHandler(async(req, res) => {
-    const incoming_refresh_token = req.cookies?.refresh_token || req.header("Authorization")?.replace("Bearer ", "")
-
-    if(!incoming_refresh_token){
-        throw new ApiError(401, "Unauthorized request, refresh token is required")
+    const is_refresh_token_valid = await bcrypt.compare(
+      incoming_refresh_token,
+      user.refresh_token
+    );
+    if (!is_refresh_token_valid) {
+      throw new ApiError(401, "Invalid Refresh Token");
     }
 
-    try {
-        const decoded_info = jwt.verify(incoming_refresh_token, process.env.REFRESH_TOKEN_SECRET)
-        console.log("decoded info:", decoded_info)
-        
-        const user = await Customer.findById(decoded_info?._id)
-            if (!user) {
-                    throw new ApiError(401, "Invalid Refresh Token")}
-            console.log("Customer found:", user.user_name);
-    
-            // verify the refresh tken with the one that is stored in db
-            console.log("Incoming refresh token:", incoming_refresh_token);
-            console.log("Stored refresh token in db:", user.refresh_token);
-        const is_refresh_token_valid = await bcrypt.compare(incoming_refresh_token, user.refresh_token);
-        console.log("Is refresh token valid:", is_refresh_token_valid);
-        if(!is_refresh_token_valid){
-            throw new ApiError(401, "Invalid Refresh Token")
-        }
-    
-        // generate new access token
-        const access_token = create_access_token(user._id, user.user_name);
-        const refresh_token = create_refresh_token(user._id);
-        console.log("New access token generated:", access_token);
-    
-        //  set encrypted refresh token in user document
-        const salt = await bcrypt.genSalt(10); // generate a salt
-        const hashed_refresh_token = await bcrypt.hash(refresh_token, salt); // hash the refresh token
-        user.refresh_token = hashed_refresh_token; // set refresh token in user document
-        await user.save({validateBeforeSave: false}); // save the user without validating the user schema again
+    // Generate new tokens
+    const access_token = create_access_token(user._id, user.user_name);
+    const refresh_token = create_refresh_token(user._id);
 
-        // remove password and refresh token from user data
-        const user_data = user.toObject();
-        user_data.refresh_token ? delete user_data.refresh_token : console.log("Refresh token field is already removed from user data");
-        user_data.password ? delete user_data.password : console.log("Password field is already removed from user data");
-    
-        return res.status(200).cookie("access_token", access_token, options).cookie("refresh_token", refresh_token, options).json(
-            new ApiResponse(200, 
-                {
-                    user: user_data, 
-                    access_token: access_token, 
-                    refresh_token: refresh_token}, 
-                    "Access token refreshed successfully"))}
-    catch (error) {
-        throw new ApiError(401, error?.message || "Unauthorized request");
-        
-        }})
+    // Hash and store new refresh token
+    const salt = await bcrypt.genSalt(10);
+    const hashed_refresh_token = await bcrypt.hash(refresh_token, salt);
+    user.refresh_token = hashed_refresh_token;
+    await user.save({ validateBeforeSave: false });
 
-const changeCurrentPassword = asyncHandler(async(req, res) => {
-    const {new_password, confirm_password, email, user_name} = req.body
-    if(!(new_password || confirm_password)){
-        throw new ApiError(400, "Password and confirm password are required")}
-    if(! (user_name || email) ){
-        throw new ApiError(400, "Customer name or email is required");
-    }
-    
-    if (email){
-        const existing_user = await Customer.findOne({email: email})
-        if(!existing_user){
-            throw new ApiError(400, "Customer dosen't exist")}
+    // Prepare response data
+    const user_data = user.toObject();
+    delete user_data.refresh_token;
+    delete user_data.password;
 
-        if ( !(new_password === confirm_password)){
-            throw new ApiError(400, "Password dosen't match")}
-        if(new_password.length < 6){
-            throw new ApiError(400, "Password must be at least 6 characters long")}
+    return res
+      .status(200)
+      .cookie("access_token", access_token, options)
+      .cookie("refresh_token", refresh_token, options)
+      .json(
+        new ApiResponse(
+          200,
+          {
+            user: user_data,
+            access_token: access_token,
+            refresh_token: refresh_token,
+          },
+          "Access token refreshed successfully"
+        )
+      );
+  } catch (error) {
+    throw new ApiError(401, error?.message || "Unauthorized request");
+  }
+});
 
-        const existing_password = await isPasswordCorrect(new_password, existing_user.password)
-        if(existing_password){
-            throw new ApiError(400, "New password can't be same as old password, kindly choose a new password")}
-        
-        existing_user.password = new_password // password will be automatically hashed by the pre-save hook in user model
-        await existing_user.save({validateBeforeSave: false})
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+  const { new_password, confirm_password, email, user_name } = req.body;
 
-        return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"))}
+  if (!new_password || !confirm_password) {
+    throw new ApiError(400, "Password and confirm password are required");
+  }
 
-    else if(user_name){
-        const existing_user = await Customer.findOne({user_name: user_name})
-        if(!existing_user){
-            throw new ApiError(400, "Customer dosen't exist")}
-        if ( !(new_password === confirm_password)){
-            throw new ApiError(400, "Password dosen't match")}
-        if(new_password.length < 6){
-            throw new ApiError(400, "Password must be at least 6 characters long")}
-        const existing_password = await isPasswordCorrect(password, existing_user.password)
-        if(existing_password){
-            throw new ApiError(400, "New password can't be same as old password, kindly choose a new password")}
-        
-        existing_user.password = new_password // password will be automatically hashed by the pre-save hook in user model
-        await existing_user.save({validateBeforeSave: false})
-    
-        return res.status(200).json(new ApiResponse(200, {}, "Password changed successfully"))}
-    })
+  if (!user_name && !email) {
+    throw new ApiError(400, "Customer name or email is required");
+  }
 
+  if (new_password !== confirm_password) {
+    throw new ApiError(400, "Passwords don't match");
+  }
 
+  if (new_password.length < 6) {
+    throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  let existing_user;
+
+  if (email) {
+    existing_user = await Customer.findOne({ email: email });
+  } else if (user_name) {
+    existing_user = await Customer.findOne({ user_name: user_name });
+  }
+
+  if (!existing_user) {
+    throw new ApiError(404, "Customer doesn't exist");
+  }
+
+  const is_same_password = await isPasswordCorrect(
+    new_password,
+    existing_user.password
+  );
+  if (is_same_password) {
+    throw new ApiError(
+      400,
+      "New password can't be same as old password, kindly choose a new password"
+    );
+  }
+
+  existing_user.password = new_password;
+  await existing_user.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
+});
 
 const getCurrentUser = asyncHandler(async (req, res) => {
-    const user = req.user; // user is attached to request object by JWTVerify middleware
-    if(!user){
-        throw new ApiError(401, "Unauthorized request");}
+  const user = req.user;
+  if (!user) {
+    throw new ApiError(401, "Unauthorized request");
+  }
 
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Current user fetched successfully"))
-})
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { user: user }, "Current user fetched successfully"));
+});
 
-const updateAccountDetails = asyncHandler(async(req, res) => {
-    const {full_name, email} = req.body
-
-    if(!full_name || !email){
-        throw new ApiError(400, "Full name and email are required")}
-
-    const user = req.user
-    user.full_name = full_name
-    user.email = email
-    await user.save({validateBeforeSave: false})
-
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Customer details updated successfully"))})
-
-
-const updateUserAvatar = asyncHandler(async(req, res) => {
-    const avatarLocalPath = req.file?.path
-
-    if(!avatarLocalPath){
-        throw new ApiError(400, "Avatar is required")}       
-
-    const user = req.user; 
-    if(!user){
-        throw new ApiError(401, "Unauthorized request")}
-
-    const avatar = await uploadOnCloudinary(avatarLocalPath)
-
-    console.log("Avatar uploaded:", avatar);
-    if(!avatar){
-        throw new ApiError(400, "Avatar upload failed")}
-    if(user.avatar){
-        console.log("Deleting old avatar from cloudinary:", user.avatar);
-        const delete_old_file = await deleteFromCloudinary(user.avatar); // delete the old avatar from cloudinary
-        if(delete_old_file){
-        console.log("Old avatar deleted successfully", delete_old_file);}
-    }
-
-    user.avatar = avatar.url // update avatar in user document
-    await user.save({validateBeforeSave: false}) // save the user without validating the user schema again
-
-    // alernative method to update avatar:
-    // const updated_user = await Customer.findByIdAndUpdate(
-    //     user?._id,
-    // { $set: {avatar: avatar.url}},
-    // {new: true}).select("-password -refresh_token") // if this is true then it will return the updated document
-    // return res.status(200).json(new ApiResponse(200, {user: updated_user}, "Customer avatar updated successfully"))
-
-    return res.status(200).json(new ApiResponse(200, {user: user}, "Customer avatar updated successfully"))
-})
-
-
-export { 
-    registerUser,
-    loginUser, 
-    logoutUser, 
-    refresh_access_token, 
-    changeCurrentPassword, 
-    getCurrentUser, 
-    updateAccountDetails, 
-    updateUserAvatar
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
+  refresh_access_token,
+  changeCurrentPassword,
+  getCurrentUser
 };

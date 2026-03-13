@@ -314,6 +314,157 @@ Future<void> uploadAvatar(String filePath, String token) async {
 
 ---
 
+## 👤 Profile Data Management
+
+After registration, you can update detailed profile information including vehicles, addresses, preferences, and more.
+
+### Update Customer Profile
+
+```javascript
+async function updateCustomerProfile(profileData, token) {
+  const res = await fetch(`${API_BASE}/customers/update_profile`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      vehicles: [
+        {
+          type: 'car', // car, bike, van, truck
+          make: 'Tesla',
+          model: 'Model 3',
+          year: 2023,
+          licensePlate: 'ABC123',
+          color: 'white',
+          seatingCapacity: 5,
+        }
+      ],
+      addresses: [
+        {
+          type: 'home', // home, work, other
+          street: '123 Main St',
+          city: 'Mumbai',
+          state: 'Maharashtra',
+          zipCode: '400001',
+          country: 'India',
+          isDefault: true,
+        }
+      ],
+      preferences: {
+        notificationsEnabled: true,
+        emailNotifications: true,
+        pushNotifications: true,
+        smsNotifications: false,
+        preferredLanguage: 'en',
+        theme: 'light',
+        privacyLevel: 'public',
+      },
+      subscriptionPlan: 'premium',
+      paymentMethods: [
+        {
+          type: 'card', // card, wallet, upi
+          lastFour: '1234',
+          expiryMonth: 12,
+          expiryYear: 2025,
+          isDefault: true,
+        }
+      ],
+    }),
+  });
+
+  return res.json();
+}
+```
+
+### Update Transporter Profile
+
+```javascript
+async function updateTransporterProfile(profileData, token) {
+  const res = await fetch(`${API_BASE}/transporters/update_profile`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      tier: 'silver', // bronze, silver, gold, platinum
+      verification: {
+        idVerification: { status: 'verified', documentType: 'aadhar' },
+        vehicleVerification: { status: 'verified' },
+        backgroundCheck: { status: 'pending' },
+      },
+      transportVehicle: {
+        type: 'van', // bike, auto, van, truck
+        make: 'Mahindra',
+        model: 'XUV500',
+        year: 2023,
+        licensePlate: 'MH01AB1234',
+        color: 'blue',
+        capacity: 5,
+        insuranceExpiry: '2025-12-31',
+      },
+      bankDetails: {
+        accountHolderName: 'John Doe',
+        accountNumber: '1234567890',
+        ifscCode: 'ICIC0000001',
+        bankName: 'ICICI Bank',
+        accountType: 'savings',
+      },
+      preferences: {
+        autoAcceptOrders: false,
+        maxDistanceRadius: 50,
+        minimumRating: 4.0,
+      },
+      isAvailable: true,
+      isOnline: true,
+      certifications: [
+        {
+          name: 'Commercial License',
+          issuedBy: 'RTO',
+          expiryDate: '2026-06-30',
+        }
+      ],
+      emergencyContact: {
+        name: 'Jane Doe',
+        phone: '+919876543210',
+        relationship: 'spouse',
+      },
+    }),
+  });
+
+  return res.json();
+}
+```
+
+### Flutter Example (Profile Update)
+
+```dart
+Future<Map<String, dynamic>> updateCustomerProfile({
+  required String token,
+  required List<Map<String, dynamic>> vehicles,
+  required List<Map<String, dynamic>> addresses,
+  Map<String, dynamic>? preferences,
+}) async {
+  final response = await http.post(
+    Uri.parse('$baseUrl/customers/update_profile'),
+    headers: {
+      'Authorization': 'Bearer $token',
+      'Content-Type': 'application/json',
+    },
+    body: jsonEncode({
+      'vehicles': vehicles,
+      'addresses': addresses,
+      'preferences': preferences,
+    }),
+  );
+
+  return jsonDecode(response.body);
+}
+```
+
+---
+
 ## ⚠️ Error Handling
 
 All errors follow a consistent format:
@@ -457,13 +608,14 @@ export async function registerCustomer(data) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      full_name: data.fullName,
+      name: data.fullName,
       email: data.email,
-      phone_number: data.phone,
-      country_code: '+91',
-      role: 'customer',
-      driving_license_number: data.license,
+      phone: data.phone,
       password: data.password,
+      country_code: '+91',
+      gender: data.gender, // optional
+      dateOfBirth: data.dateOfBirth, // optional, format: YYYY-MM-DD
+      bio: data.bio, // optional
     }),
   });
 
@@ -515,20 +667,23 @@ class AuthService {
     required String fullName,
     required String email,
     required String phone,
-    required String license,
     required String password,
+    String? gender,
+    String? dateOfBirth,
+    String? bio,
   }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/customers/register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
-        'full_name': fullName,
+        'name': fullName,
         'email': email,
-        'phone_number': phone,
-        'country_code': '+91',
-        'role': 'customer',
-        'driving_license_number': license,
+        'phone': phone,
         'password': password,
+        'country_code': '+91',
+        if (gender != null) 'gender': gender,
+        if (dateOfBirth != null) 'dateOfBirth': dateOfBirth,
+        if (bio != null) 'bio': bio,
       }),
     );
 
@@ -576,4 +731,4 @@ class AuthService {
 
 ---
 
-_Last updated: March 2, 2026_
+_Last updated: March 13, 2026_

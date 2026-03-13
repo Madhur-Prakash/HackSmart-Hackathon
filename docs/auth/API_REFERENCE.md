@@ -506,25 +506,27 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 
 ```json
 {
-  "full_name": "Rahul Sharma",
+  "name": "Rahul Sharma",
   "email": "rahul@example.com",
-  "phone_number": "9123456789",
-  "country_code": "+91",
-  "role": "customer",
-  "driving_license_number": "DL-0420110012345",
-  "password": "myPassword123"
+  "phone": "9123456789",
+  "password": "myPassword123",
+  "gender": "male",
+  "dateOfBirth": "1995-05-15",
+  "bio": "EV enthusiast",
+  "country_code": "+91"
 }
 ```
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| `full_name` | `string` | Yes | Min 5 chars |
+| `name` | `string` | Yes | Min 2 chars |
 | `email` | `string` | Yes | Must contain `@`, unique |
-| `phone_number` | `string` | Yes | Exactly 10 digits, unique |
-| `country_code` | `string` | Yes | e.g. `"+91"` |
-| `role` | `string` | Yes | Must be `"customer"` |
-| `driving_license_number` | `string` | Yes | Exactly 15 chars, unique |
+| `phone` | `string` | Yes | 10-15 digits, unique |
 | `password` | `string` | Yes | Min 6 chars |
+| `gender` | `string` | No | `"male"`, `"female"`, or `"other"` |
+| `dateOfBirth` | `string` | No | ISO 8601 date format |
+| `bio` | `string` | No | Max 500 chars |
+| `country_code` | `string` | No | e.g. `"+91"` |
 
 **Success Response — `201 Created`:**
 
@@ -535,13 +537,44 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
   "data": {
     "user": {
       "_id": "665f1a2b3c4d5e6f7a8b9c0e",
-      "full_name": "Rahul Sharma",
+      "id": "665f1a2b3c4d5e6f7a8b9c0e",
+      "name": "Rahul Sharma",
       "user_name": "Rahul Sharma_x7y8z9",
       "email": "rahul@example.com",
-      "phone_number": "9123456789",
+      "phone": "9123456789",
       "country_code": "+91",
       "role": "customer",
-      "driving_license_number": "DL-0420110012345",
+      "status": "pending",
+      "profileImage": null,
+      "bio": "EV enthusiast",
+      "gender": "male",
+      "dateOfBirth": "1995-05-15T00:00:00.000Z",
+      "isVerified": false,
+      "isApproved": false,
+      "lastLoginAt": null,
+      "customerProfile": {
+        "vehicles": [],
+        "addresses": [],
+        "preferences": {
+          "notificationsEnabled": true,
+          "emailNotifications": true,
+          "pushNotifications": true,
+          "smsNotifications": false,
+          "preferredLanguage": "en",
+          "theme": "light",
+          "privacyLevel": "private"
+        },
+        "stats": {
+          "totalSwaps": 0,
+          "totalSpent": 0,
+          "favoriteStationCount": 0,
+          "averageWaitTime": 0,
+          "reliabilityScore": 0,
+          "streakDays": 0
+        },
+        "subscriptionPlan": "free",
+        "paymentMethods": []
+      },
       "isProfileCompleted": false,
       "createdAt": "2026-03-02T11:00:00.000Z",
       "updatedAt": "2026-03-02T11:00:00.000Z"
@@ -557,9 +590,9 @@ const response = await fetch('http://localhost:8000/api/v1/companies/update_avat
 
 | Status | Message |
 |--------|---------|
-| `400` | `"All fields are required"` |
-| `400` | `"Invalid role"` |
+| `400` | `"Name, email, phone, and password are required"` |
 | `400` | `"Email is not valid"` |
+| `400` | `"Password must be at least 6 characters long"` |
 | `409` | `"Customer already exists with this email"` |
 | `500` | `"Customer registration failed"` |
 
@@ -667,8 +700,40 @@ Same pattern as [Company Get Current User](#6-get-current-user).
 |---|---|
 | **URL** | `PATCH /api/v1/customers/update_account_details` |
 | **Auth** | Required (`access_token`) |
+| **Content-Type** | `application/json` |
 
-Same pattern as [Company Update Account Details](#7-update-account-details).
+**Request Body:**
+
+```json
+{
+  "name": "Rahul Sharma Updated",
+  "email": "rahul.new@example.com",
+  "bio": "Updated bio",
+  "gender": "male",
+  "dateOfBirth": "1995-05-15"
+}
+```
+
+| Field | Type | Required |
+|-------|------|----------|
+| `name` | `string` | Yes |
+| `email` | `string` | Yes |
+| `bio` | `string` | No |
+| `gender` | `string` | No |
+| `dateOfBirth` | `string` | No |
+
+**Success Response — `200 OK`:**
+
+```json
+{
+  "status_code": 200,
+  "message": "Customer details updated successfully",
+  "data": {
+    "user": { ... }
+  },
+  "success": true
+}
+```
 
 ---
 
@@ -680,7 +745,117 @@ Same pattern as [Company Update Account Details](#7-update-account-details).
 | **Auth** | Required (`access_token`) |
 | **Content-Type** | `multipart/form-data` |
 
-Same pattern as [Company Update Avatar](#8-update-avatar).
+**Request Body (form-data):**
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `avatar` | `file` | Yes | Image file (jpg, png, etc.) |
+
+**Success Response — `200 OK`:**
+
+```json
+{
+  "status_code": 200,
+  "message": "Customer avatar updated successfully",
+  "data": {
+    "user": {
+      "profileImage": "https://res.cloudinary.com/xxx/image/upload/v123/photo.jpg",
+      ...
+    }
+  },
+  "success": true
+}
+```
+
+---
+
+### 9. Update Customer Profile
+
+| | |
+|---|---|
+| **URL** | `POST /api/v1/customers/update_profile` |
+| **Auth** | Required (`access_token`) |
+| **Content-Type** | `application/json` |
+
+**Request Body:**
+
+```json
+{
+  "vehicles": [
+    {
+      "id": "vehicle_1",
+      "name": "My Tesla",
+      "make": "Tesla",
+      "model": "Model 3",
+      "year": 2023,
+      "registrationNumber": "MH02AB1234",
+      "batteryCapacity": 75,
+      "batteryType": "Li-ion",
+      "color": "White"
+    }
+  ],
+  "addresses": [
+    {
+      "id": "addr_1",
+      "type": "home",
+      "street": "123 Main Street",
+      "city": "Mumbai",
+      "state": "Maharashtra",
+      "zipCode": "400001",
+      "country": "India",
+      "latitude": 19.0760,
+      "longitude": 72.8777,
+      "isDefault": true
+    }
+  ],
+  "preferences": {
+    "notificationsEnabled": true,
+    "emailNotifications": true,
+    "theme": "dark"
+  },
+  "subscriptionPlan": "premium",
+  "paymentMethods": [
+    {
+      "type": "card",
+      "cardDetails": {
+        "cardNumber": "****1234",
+        "cardHolder": "Rahul Sharma"
+      },
+      "isDefault": true
+    }
+  ]
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `vehicles` | `array` | No | List of vehicle objects |
+| `addresses` | `array` | No | List of address objects |
+| `preferences` | `object` | No | Preference settings |
+| `subscriptionPlan` | `string` | No | `free`, `basic`, `premium`, `enterprise` |
+| `paymentMethods` | `array` | No | List of payment methods |
+
+**Success Response — `200 OK`:**
+
+```json
+{
+  "status_code": 200,
+  "message": "Customer profile updated successfully",
+  "data": {
+    "user": {
+      "customerProfile": {
+        "vehicles": [...],
+        "addresses": [...],
+        "preferences": {...},
+        "subscriptionPlan": "premium",
+        "paymentMethods": [...]
+      },
+      ...
+    }
+  },
+  "success": true
+}
+```
 
 ---
 
@@ -700,25 +875,29 @@ Same pattern as [Company Update Avatar](#8-update-avatar).
 
 ```json
 {
-  "full_name": "Suresh Kumar",
+  "name": "Suresh Kumar",
   "email": "suresh@transport.com",
-  "phone_number": "9988776655",
-  "country_code": "+91",
-  "role": "transporter",
+  "phone": "9988776655",
+  "password": "transportPass123",
   "driving_license_number": "KA-0120200054321",
-  "password": "transportPass123"
+  "gender": "male",
+  "dateOfBirth": "1990-08-20",
+  "bio": "Professional transporter",
+  "country_code": "+91"
 }
 ```
 
 | Field | Type | Required | Constraints |
 |-------|------|----------|-------------|
-| `full_name` | `string` | Yes | Min 5 chars |
+| `name` | `string` | Yes | Min 2 chars |
 | `email` | `string` | Yes | Must contain `@`, unique |
-| `phone_number` | `string` | Yes | Exactly 10 digits, unique |
-| `country_code` | `string` | Yes | e.g. `"+91"` |
-| `role` | `string` | Yes | Must be `"transporter"` |
-| `driving_license_number` | `string` | Yes | Exactly 15 chars, unique |
+| `phone` | `string` | Yes | 10-15 digits, unique |
 | `password` | `string` | Yes | Min 6 chars |
+| `driving_license_number` | `string` | Yes | Exactly 15 chars, unique |
+| `gender` | `string` | No | `"male"`, `"female"`, or `"other"` |
+| `dateOfBirth` | `string` | No | ISO 8601 date format |
+| `bio` | `string` | No | Max 500 chars |
+| `country_code` | `string` | No | e.g. `"+91"` |
 
 **Success Response — `201 Created`:**
 
@@ -729,12 +908,46 @@ Same pattern as [Company Update Avatar](#8-update-avatar).
   "data": {
     "user": {
       "_id": "665f1a2b3c4d5e6f7a8b9c0f",
-      "full_name": "Suresh Kumar",
+      "id": "665f1a2b3c4d5e6f7a8b9c0f",
+      "name": "Suresh Kumar",
       "user_name": "Suresh Kumar_p4q5r6",
       "email": "suresh@transport.com",
-      "phone_number": "9988776655",
+      "phone": "9988776655",
       "country_code": "+91",
       "role": "transporter",
+      "status": "pending",
+      "profileImage": null,
+      "bio": "Professional transporter",
+      "gender": "male",
+      "dateOfBirth": "1990-08-20T00:00:00.000Z",
+      "isVerified": false,
+      "isApproved": false,
+      "lastLoginAt": null,
+      "transporterProfile": {
+        "tier": "bronze",
+        "stats": {
+          "totalEarnings": 0,
+          "totalDeliveries": 0,
+          "efficiencyScore": 0,
+          "onTimePercentage": 0,
+          "averageRating": 0
+        },
+        "verification": {
+          "idVerification": "pending",
+          "vehicleVerification": "pending",
+          "backgroundCheck": "pending"
+        },
+        "preferences": {
+          "notificationsEnabled": true,
+          "autoAcceptOrders": false,
+          "maxDistanceRadius": 50
+        },
+        "isAvailable": false,
+        "isOnline": false,
+        "walletBalance": 0,
+        "certifications": [],
+        "emergencyContact": null
+      },
       "driving_license_number": "KA-0120200054321",
       "isProfileCompleted": false,
       "createdAt": "2026-03-02T12:00:00.000Z",
@@ -747,11 +960,19 @@ Same pattern as [Company Update Avatar](#8-update-avatar).
 }
 ```
 
+**Error Responses:**
+
+| Status | Message |
+|--------|---------|
+| `400` | `"Name, email, phone, password, and driving license are required"` |
+| `400` | `"Email is not valid"` |
+| `400` | `"Password must be at least 6 characters long"` |
+| `409` | `"Transporter already exists with this email"` |
+| `500` | `"Transporter registration failed"` |
+
 ---
 
 ### 2–8. Other Transporter Endpoints
-
-All other endpoints follow the **same pattern** as the Company API:
 
 | # | Method | Endpoint | Auth |
 |---|--------|----------|------|
@@ -762,6 +983,98 @@ All other endpoints follow the **same pattern** as the Company API:
 | 6 | `GET` | `/api/v1/transporters/current_user` | Required |
 | 7 | `PATCH` | `/api/v1/transporters/update_account_details` | Required |
 | 8 | `PATCH` | `/api/v1/transporters/update_avatar` | Required |
+
+---
+
+### 9. Update Transporter Profile
+
+| | |
+|---|---|
+| **URL** | `POST /api/v1/transporters/update_profile` |
+| **Auth** | Required (`access_token`) |
+| **Content-Type** | `application/json` |
+
+**Request Body:**
+
+```json
+{
+  "tier": "silver",
+  "verification": {
+    "idVerification": "approved",
+    "idDocument": "https://...",
+    "vehicleVerification": "approved",
+    "vehicleDocument": "https://...",
+    "backgroundCheck": "approved"
+  },
+  "transportVehicle": {
+    "id": "vehicle_1",
+    "name": "Transport Van",
+    "make": "Tata",
+    "model": "Ace",
+    "year": 2022,
+    "registrationNumber": "MH02AB9999",
+    "batteryCapacity": 50,
+    "color": "White"
+  },
+  "bankDetails": {
+    "accountHolderName": "Suresh Kumar",
+    "accountNumber": "1234567890123456",
+    "bankName": "HDFC Bank",
+    "ifscCode": "HDFC0001234",
+    "panNumber": "ABCDE1234F"
+  },
+  "preferences": {
+    "autoAcceptOrders": true,
+    "maxDistanceRadius": 75,
+    "minimumRating": 4.5
+  },
+  "isAvailable": true,
+  "isOnline": true,
+  "certifications": ["DL_CERTIFIED", "CARGO_CERTIFIED"],
+  "emergencyContact": {
+    "name": "Priya Kumar",
+    "phone": "9876543210",
+    "email": "priya@example.com",
+    "relationship": "spouse"
+  }
+}
+```
+
+| Field | Type | Required | Notes |
+|-------|------|----------|-------|
+| `tier` | `string` | No | `bronze`, `silver`, `gold`, `platinum` |
+| `verification` | `object` | No | Verification status and docs |
+| `transportVehicle` | `object` | No | Vehicle details |
+| `bankDetails` | `object` | No | Banking information |
+| `preferences` | `object` | No | Profile preferences |
+| `isAvailable` | `boolean` | No | Availability status |
+| `isOnline` | `boolean` | No | Online status |
+| `certifications` | `array` | No | List of certifications |
+| `emergencyContact` | `object` | No | Emergency contact info |
+
+**Success Response — `200 OK`:**
+
+```json
+{
+  "status_code": 200,
+  "message": "Transporter profile updated successfully",
+  "data": {
+    "user": {
+      "transporterProfile": {
+        "tier": "silver",
+        "verification": {...},
+        "transportVehicle": {...},
+        "bankDetails": {...},
+        "isAvailable": true,
+        "isOnline": true,
+        ...
+      },
+      ...
+    }
+  },
+  "success": true
+}
+```
 
 ---
 
@@ -983,17 +1296,83 @@ All other endpoints follow the **same pattern** as the Company API:
 ```
 {
   _id:                    ObjectId (auto)
-  full_name:              String   (required, min 5 chars)
+  id:                     String   (mirrors _id)
+  name:                   String   (required, min 2 chars)
   user_name:              String   (auto-generated, unique)
   email:                  String   (required, unique, lowercase)
-  phone_number:           String   (required, 10 digits, unique)
-  country_code:           String   (required)
-  driving_license_number: String   (required, 15 chars, unique)
-  avatar:                 String
+  phone:                  String   (required, 10-15 digits, unique)
+  country_code:           String   (optional)
   password:               String   (min 6 chars, hashed)
   refresh_token:          String
-  role:                   String   (enum: super_admin | staff | regional_admin | customer)
+  role:                   String   (always "customer")
+  status:                 String   (enum: pending | active | suspended | deactivated | rejected, default: "pending")
+  profileImage:           String   (optional, URL to Cloudinary)
+  bio:                    String   (optional, max 500 chars)
+  gender:                 String   (optional, enum: male | female | other)
+  dateOfBirth:            Date     (optional)
+  isVerified:             Boolean  (default: false)
+  isApproved:             Boolean  (default: false)
+  lastLoginAt:            Date     (optional)
   isProfileCompleted:     Boolean  (default: false)
+  
+  // Nested profile object
+  customerProfile: {
+    vehicles: [{
+      id: String,
+      name: String,
+      make: String,
+      model: String,
+      year: Number,
+      registrationNumber: String,
+      batteryCapacity: Number,
+      batteryType: String,
+      color: String,
+      imageUrl: String,
+      isActive: Boolean
+    }],
+    addresses: [{
+      id: String,
+      type: String (home | work | other),
+      street: String,
+      city: String,
+      state: String,
+      zipCode: String,
+      country: String,
+      latitude: Number,
+      longitude: Number,
+      isDefault: Boolean
+    }],
+    defaultAddress: Object (Address),
+    preferences: {
+      notificationsEnabled: Boolean,
+      emailNotifications: Boolean,
+      pushNotifications: Boolean,
+      smsNotifications: Boolean,
+      preferredLanguage: String,
+      theme: String (light | dark),
+      privacyLevel: String (public | private | friends_only)
+    },
+    stats: {
+      totalSwaps: Number,
+      totalSpent: Number,
+      favoriteStationCount: Number,
+      averageWaitTime: Number,
+      reliabilityScore: Number,
+      streakDays: Number,
+      lastSwapAt: Date
+    },
+    subscriptionPlan: String (free | basic | premium | enterprise),
+    subscriptionExpiresAt: Date,
+    paymentMethods: Array,
+    defaultPaymentMethod: Object
+  },
+  
+  // Legacy fields (for backward compatibility)
+  full_name:              String
+  phone_number:           String
+  avatar:                 String
+  driving_license_number: String   (optional)
+  
   createdAt:              Date     (auto)
   updatedAt:              Date     (auto)
 }
@@ -1004,17 +1383,87 @@ All other endpoints follow the **same pattern** as the Company API:
 ```
 {
   _id:                    ObjectId (auto)
-  full_name:              String   (required, min 5 chars)
+  id:                     String   (mirrors _id)
+  name:                   String   (required, min 2 chars)
   user_name:              String   (auto-generated, unique)
   email:                  String   (required, unique, lowercase)
-  phone_number:           String   (required, 10 digits, unique)
-  country_code:           String   (required)
-  driving_license_number: String   (required, 15 chars, unique)
-  avatar:                 String
+  phone:                  String   (required, 10-15 digits, unique)
+  country_code:           String   (optional)
   password:               String   (min 6 chars, hashed)
   refresh_token:          String
-  role:                   String   (enum: super_admin | staff | regional_admin | transporter | customer)
+  role:                   String   (always "transporter")
+  status:                 String   (enum: pending | active | suspended | deactivated | rejected, default: "pending")
+  profileImage:           String   (optional, URL to Cloudinary)
+  bio:                    String   (optional, max 500 chars)
+  gender:                 String   (optional, enum: male | female | other)
+  dateOfBirth:            Date     (optional)
+  isVerified:             Boolean  (default: false)
+  isApproved:             Boolean  (default: false)
+  lastLoginAt:            Date     (optional)
   isProfileCompleted:     Boolean  (default: false)
+  
+  // Nested profile object
+  transporterProfile: {
+    tier: String (bronze | silver | gold | platinum, default: bronze),
+    stats: {
+      totalEarnings: Number,
+      totalDeliveries: Number,
+      efficiencyScore: Number,
+      onTimePercentage: Number,
+      todayDeliveries: Number,
+      todayEarnings: Number,
+      averageRating: Number,
+      totalRatings: Number,
+      cancelledTasks: Number,
+      rejectedTasks: Number
+    },
+    verification: {
+      idVerification: String (pending | approved | rejected | expired),
+      idDocument: String,
+      idExpiryDate: Date,
+      vehicleVerification: String,
+      vehicleDocument: String,
+      backgroundCheck: String,
+      backgroundCheckDate: Date
+    },
+    transportVehicle: Object (Vehicle),
+    bankDetails: {
+      accountHolderName: String,
+      accountNumber: String,
+      bankName: String,
+      ifscCode: String,
+      accountType: String (savings | current),
+      panNumber: String
+    },
+    preferences: {
+      notificationsEnabled: Boolean,
+      emailNotifications: Boolean,
+      pushNotifications: Boolean,
+      smsNotifications: Boolean,
+      preferredLanguage: String,
+      theme: String (light | dark),
+      autoAcceptOrders: Boolean,
+      maxDistanceRadius: Number,
+      minimumRating: Number
+    },
+    isAvailable: Boolean,
+    isOnline: Boolean,
+    walletBalance: Number,
+    certifications: Array,
+    emergencyContact: {
+      name: String,
+      phone: String,
+      email: String,
+      relationship: String
+    }
+  },
+  
+  // Legacy fields (for backward compatibility)
+  full_name:              String
+  phone_number:           String
+  avatar:                 String
+  driving_license_number: String   (required, 15 chars, unique)
+  
   createdAt:              Date     (auto)
   updatedAt:              Date     (auto)
 }
@@ -1102,4 +1551,4 @@ EMAIL_PASSWORD=your_gmail_app_password
 
 ---
 
-_Last updated: March 2, 2026_
+_Last updated: March 13, 2026_
