@@ -4,14 +4,18 @@ import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudin
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
-    const {full_name, email} = req.body
+    const {email, phone_number, country_code} = req.body
 
-    if(!full_name || !email){
-        throw new ApiError(400, "Full name and email are required")}
+    if(!email){
+        throw new ApiError(400, "Email is required")}
 
     const user = req.user
-    user.full_name = full_name
     user.email = email
+    if (phone_number && !country_code) {
+        throw new ApiError(400, "Country code is required when phone number is provided")
+    }
+    if (phone_number) user.phone_number = phone_number;
+    if (country_code) user.country_code = country_code;
     await user.save({validateBeforeSave: false})
 
     return res.status(200).json(new ApiResponse(200, {user: user}, "Company details updated successfully"))})

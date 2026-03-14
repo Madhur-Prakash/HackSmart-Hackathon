@@ -14,6 +14,7 @@
     { "name": "User - Companies", "description": "Company profile APIs" },
     { "name": "User - Customers", "description": "Customer profile APIs" },
     { "name": "User - Transporters", "description": "Transporter profile APIs" },
+    { "name": "User - Regional Admins", "description": "Regional admin profile APIs" },
     { "name": "User - Staff", "description": "Staff profile APIs" },
     { "name": "Health", "description": "Health check APIs" }
   ],
@@ -642,7 +643,6 @@
             "schema": {
               "type": "object",
               "properties": {
-                "full_name": { "type": "string", "example": "John Doe" },
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "phone_number": { "type": "string", "example": "9876543210" },
                 "country_code": { "type": "string", "example": "+91" }
@@ -702,7 +702,6 @@
             "schema": {
               "type": "object",
               "properties": {
-                "full_name": { "type": "string", "example": "John Doe" },
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "phone_number": { "type": "string", "example": "9876543210" },
                 "country_code": { "type": "string", "example": "+91" }
@@ -744,7 +743,7 @@
     },
     "/api/v1/user/regional_admin/update_account_details": {
       "patch": {
-        "tags": ["User - Staff"],
+        "tags": ["User - Regional Admins"],
         "summary": "Update regional admin account details",
         "description": "Updates the account details of the authenticated regional admin.",
         "parameters": [
@@ -762,7 +761,6 @@
             "schema": {
               "type": "object",
               "properties": {
-                "full_name": { "type": "string", "example": "John Doe" },
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "phone_number": { "type": "string", "example": "9876543210" },
                 "country_code": { "type": "string", "example": "+91" }
@@ -777,7 +775,7 @@
     },
     "/api/v1/user/regional_admin/update_avatar": {
       "patch": {
-        "tags": ["User - Staff"],
+        "tags": ["User - Regional Admins"],
         "summary": "Update regional admin avatar",
         "description": "Updates the profile picture of the authenticated regional admin. Send as multipart/form-data with key 'avatar'.",
         "consumes": ["multipart/form-data"],
@@ -822,11 +820,10 @@
             "schema": {
               "type": "object",
               "properties": {
-                "full_name": { "type": "string", "example": "John Doe" },
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "bio": { "type": "string", "example": "Regular customer using the platform for deliveries." },
-                "gender": { "type": "string", "example": "male" },
-                "dateOfBirth": { "type": "string", "example": "1990-05-15" }
+                "phone_number": { "type": "string", "example": "9876543210" },
+                "country_code": { "type": "string", "example": "+91" }
               }
             }
           }
@@ -931,11 +928,10 @@
             "schema": {
               "type": "object",
               "properties": {
-                "full_name": { "type": "string", "example": "John Doe" },
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "bio": { "type": "string", "example": "Experienced transporter with 5+ years in logistics." },
-                "gender": { "type": "string", "example": "male" },
-                "dateOfBirth": { "type": "string", "example": "1990-05-15" }
+                "phone_number": { "type": "string", "example": "9876543210" },
+                "country_code": { "type": "string", "example": "+91" }
               }
             }
           }

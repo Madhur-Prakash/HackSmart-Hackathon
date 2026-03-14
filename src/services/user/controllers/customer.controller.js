@@ -7,18 +7,20 @@ import {
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { full_name, email, bio, gender, dateOfBirth } = req.body;
+  const { email, bio, phone_number, country_code } = req.body;
 
-  if (!full_name || !email) {
-    throw new ApiError(400, "Full Name and email are required");
+  if ( !email) {
+    throw new ApiError(400, "Email is required");
   }
 
   const user = req.user;
-  user.full_name = full_name;
   user.email = email;
   if (bio) user.bio = bio;
-  if (gender) user.gender = gender;
-  if (dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
+  if (phone_number && !country_code) {
+          throw new ApiError(400, "Country code is required when phone number is provided")
+      }
+  if (phone_number) user.phone_number = phone_number;
+  if (country_code) user.country_code = country_code;
 
   await user.save({ validateBeforeSave: false });
 
