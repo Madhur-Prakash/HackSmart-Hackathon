@@ -18,7 +18,7 @@
     { "name": "Health", "description": "Health check APIs" }
   ],
   "basePath": "/",
-  "schemes": ["https"],
+  "schemes": ["https","http"],
   "paths": {
     "/api/v1/auth/companies/register": {
       "post": {
@@ -37,7 +37,7 @@
                 "email": { "type": "string", "example": "john.doe@example.com" },
                 "phone_number": { "type": "string", "example": "9876543210" },
                 "country_code": { "type": "string", "example": "+91" },
-                "role": { "type": "string", "example": "admin" },
+                "role": { "type": "string", "example": "super_admin" },
                 "password": { "type": "string", "example": "SecurePass@123" }
               },
               "required": ["full_name", "email", "phone_number", "country_code", "role", "password"]
