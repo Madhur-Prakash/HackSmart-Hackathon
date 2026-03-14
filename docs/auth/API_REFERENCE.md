@@ -545,7 +545,7 @@ const response = await fetch('http://localhost:8000/api/v1/auth/companies/update
       "country_code": "+91",
       "role": "customer",
       "status": "pending",
-      "profileImage": null,
+      "avatar": null,
       "bio": "EV enthusiast",
       "gender": "male",
       "dateOfBirth": "1995-05-15T00:00:00.000Z",
@@ -764,7 +764,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
   "message": "Customer avatar updated successfully",
   "data": {
     "user": {
-      "profileImage": "https://res.cloudinary.com/xxx/image/upload/v123/photo.jpg",
+      "avatar": "https://res.cloudinary.com/xxx/image/upload/v123/photo.jpg",
       ...
     }
   },
@@ -921,7 +921,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
       "country_code": "+91",
       "role": "transporter",
       "status": "pending",
-      "profileImage": null,
+      "avatar": null,
       "bio": "Professional transporter",
       "gender": "male",
       "dateOfBirth": "1990-08-20T00:00:00.000Z",
@@ -1311,7 +1311,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
   refresh_token:          String
   role:                   String   (always "customer")
   status:                 String   (enum: pending | active | suspended | deactivated | rejected, default: "pending")
-  profileImage:           String   (optional, URL to Cloudinary)
+  avatar:           String   (optional, URL to Cloudinary)
   bio:                    String   (optional, max 500 chars)
   gender:                 String   (optional, enum: male | female | other)
   dateOfBirth:            Date     (optional)
@@ -1398,7 +1398,7 @@ Same pattern as [Company Get Current User](#6-get-current-user).
   refresh_token:          String
   role:                   String   (always "transporter")
   status:                 String   (enum: pending | active | suspended | deactivated | rejected, default: "pending")
-  profileImage:           String   (optional, URL to Cloudinary)
+  avatar:           String   (optional, URL to Cloudinary)
   bio:                    String   (optional, max 500 chars)
   gender:                 String   (optional, enum: male | female | other)
   dateOfBirth:            Date     (optional)

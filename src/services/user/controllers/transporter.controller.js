@@ -55,17 +55,17 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Avatar upload failed");
   }
 
-  if (user.profileImage) {
-    console.log("Deleting old avatar from cloudinary:", user.profileImage);
+  if (user.avatar) {
+    console.log("Deleting old avatar from cloudinary:", user.avatar);
     try {
-      await deleteFromCloudinary(user.profileImage);
+      await deleteFromCloudinary(user.avatar);
       console.log("Old avatar deleted successfully");
     } catch (err) {
       console.error("Error deleting old avatar:", err);
     }
   }
 
-  user.profileImage = avatar.url;
+  user.avatar = avatar.url;
   user.avatar = avatar.url; // Legacy field
   await user.save({ validateBeforeSave: false });
 

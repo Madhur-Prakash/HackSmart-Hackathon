@@ -42,7 +42,8 @@ const staff = new mongoose.Schema({
     },
     avatar: {
         type: String,
-        required: false
+        required: false,
+        default: "N/A",
     },
     password: { // auto generating the password for regional admin and send it to the regional admin email, so that the regional admin can change the password after first login
         type: String,

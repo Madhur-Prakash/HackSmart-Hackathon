@@ -65,9 +65,10 @@ const customer = new mongoose.Schema(
       default: UserStatus.PENDING,
       enum: Object.values(UserStatus),
     },
-    profileImage: {
+    avatar: {
       type: String,
       required: false,
+      default: "N/A",
     },
     bio: {
       type: String,
