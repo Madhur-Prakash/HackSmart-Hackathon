@@ -15,11 +15,11 @@ import {
 import { UserStatus } from "../../../constants.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { full_name, email, phone_number, country_code, password, gender, dateOfBirth, bio } = req.body;
+  const { full_name, email, phone_number, country_code, password, gender, dateOfBirth, bio, driving_license_number } = req.body;
 
   // Validate required fields
-  if ([full_name, email, phone_number, country_code, password].some((field) => field?.trim() === "")) {
-    throw new ApiError(400, "Full Name, email, phone, and password are required");
+  if ([full_name, email, phone_number, country_code, password, driving_license_number].some((field) => field?.trim() === "")) {
+    throw new ApiError(400, "Full Name, email, phone, driving license number, and password are required");
   }
 
   if (!email.includes("@")) {
@@ -28,6 +28,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (password.length < 6) {
     throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  if (driving_license_number.length !== 15) {
+    throw new ApiError(400, "Driving license number must be exactly 15 characters long");
   }
 
   // Check if customer already exists

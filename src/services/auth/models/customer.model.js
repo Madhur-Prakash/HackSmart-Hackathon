@@ -65,6 +65,13 @@ const customer = new mongoose.Schema(
       default: UserStatus.PENDING,
       enum: Object.values(UserStatus),
     },
+    driving_license_number: {
+      type: String,
+      minlength: 15,
+      maxlength: 15,
+      unique: true,
+      sparse: true,
+    },
     avatar: {
       type: String,
       required: false,
