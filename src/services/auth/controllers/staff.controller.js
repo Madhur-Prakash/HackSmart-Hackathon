@@ -222,7 +222,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 
 
 const refresh_access_token = asyncHandler(async(req, res) => {
-    const incoming_refresh_token = req.cookies?.refresh_token || req.header("Authorization")?.replace("Bearer ", "")
+    const incoming_refresh_token = req.cookies?.refresh_token;
 
     if(!incoming_refresh_token){
         throw new ApiError(401, "Unauthorized request, refresh token is required")
@@ -230,18 +230,13 @@ const refresh_access_token = asyncHandler(async(req, res) => {
 
     try {
         const decoded_info = jwt.verify(incoming_refresh_token, process.env.REFRESH_TOKEN_SECRET)
-        console.log("decoded info:", decoded_info)
         
         const user = await Staff.findById(decoded_info?._id)
             if (!user) {
                     throw new ApiError(401, "Invalid Refresh Token")}
-            console.log("Staff found:", user.user_name);
     
             // verify the refresh tken with the one that is stored in db
-            console.log("Incoming refresh token:", incoming_refresh_token);
-            console.log("Stored refresh token in db:", user.refresh_token);
         const is_refresh_token_valid = await bcrypt.compare(incoming_refresh_token, user.refresh_token);
-        console.log("Is refresh token valid:", is_refresh_token_valid);
         if(!is_refresh_token_valid){
             throw new ApiError(401, "Invalid Refresh Token")
         }
@@ -249,7 +244,6 @@ const refresh_access_token = asyncHandler(async(req, res) => {
         // generate new access token
         const access_token = create_access_token(user._id, user.user_name);
         const refresh_token = create_refresh_token(user._id);
-        console.log("New access token generated:", access_token);
     
         //  set encrypted refresh token in user document
         const salt = await bcrypt.genSalt(10); // generate a salt
