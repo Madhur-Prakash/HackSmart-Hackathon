@@ -86,7 +86,7 @@ const options = {
         },
         RegisterStaffBody: {
           type: "object",
-          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role"],
+          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id", "regional_admin_id"],
           properties: {
             full_name: { type: "string", example: "Staff Member" },
             email: { type: "string", format: "email", example: "staff@navswap.com" },
@@ -94,11 +94,13 @@ const options = {
             addhar_card_number: { type: "string", example: "123456789012" },
             country_code: { type: "string", example: "+91" },
             role: { type: "string", enum: ["staff"], example: "staff" },
+            company_id: { type: "string", example: "60d21b4667d0d8992e610c84" },
+            regional_admin_id: { type: "string", example: "60d21b4667d0d8992e610c85" },
           },
         },
         RegisterRegionalAdminBody: {
           type: "object",
-          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role"],
+          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id"],
           properties: {
             full_name: { type: "string", example: "Regional Admin" },
             email: { type: "string", format: "email", example: "radmin@navswap.com" },
@@ -106,6 +108,7 @@ const options = {
             addhar_card_number: { type: "string", example: "987654321098" },
             country_code: { type: "string", example: "+91" },
             role: { type: "string", enum: ["regional_admin"], example: "regional_admin" },
+            company_id: { type: "string", example: "60d21b4667d0d8992e610c84" },
           },
         },
         LoginBody: {
