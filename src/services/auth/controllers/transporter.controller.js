@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../../../constants.js";
+import { options, UserRole } from "../../../constants.js";
 import { Transporter } from "../models/transporter.model.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import {
@@ -15,7 +15,7 @@ import {
 import { UserStatus, TransporterTier, VerificationStatus } from "../../../constants.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { full_name, email, phone_number, country_code, password, driving_license_number, gender, dateOfBirth, bio } = req.body;
+  const { full_name, email, phone_number, country_code, password, driving_license_number, role } = req.body;
 
   // Validate required fields
   if ([full_name, email, phone_number, country_code, password, driving_license_number].some((field) => field?.trim() === "")) {
@@ -29,6 +29,11 @@ const registerUser = asyncHandler(async (req, res) => {
   if (password.length < 6) {
     throw new ApiError(400, "Password must be at least 6 characters long");
   }
+
+  if (role && role !== UserRole.TRANSPORTER) {
+    throw new ApiError(400, "Invalid role for transporter registration");
+  }
+
 
   if (driving_license_number.length !== 15) {
     throw new ApiError(400, "Driving license number must be exactly 15 characters long");
@@ -61,9 +66,9 @@ const registerUser = asyncHandler(async (req, res) => {
     password: password, // Will be hashed by pre-save hook
     driving_license_number: driving_license_number,
     status: UserStatus.PENDING,
-    gender: gender || null,
-    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-    bio: bio || null,
+    gender: null,
+    dateOfBirth: null,
+    bio: null,
     isVerified: false,
     isApproved: false,
     // Initialize empty transporter profile

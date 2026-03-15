@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../../../constants.js";
+import { options, UserRole } from "../../../constants.js";
 import {RegionalAdmin} from "../models/regional_admin.model.js"
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { create_access_token,
@@ -18,7 +18,7 @@ const registerUser = asyncHandler( async (req, res) => {
     if([full_name, email, phone_number, addhar_card_number, country_code, role].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
-    if (role !== "regional_admin"){
+    if (role && role !== UserRole.REGIONAL_ADMIN){
         throw new ApiError(400, "Invalid role")
     }
     if(!email.includes("@")){
@@ -56,7 +56,6 @@ const registerUser = asyncHandler( async (req, res) => {
         phone_number: phone_number,
         addhar_card_number: addhar_card_number,
         country_code: country_code,
-        role: role,
         password: hashed_password
     })
     if(!new_user){

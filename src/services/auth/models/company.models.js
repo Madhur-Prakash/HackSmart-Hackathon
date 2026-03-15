@@ -1,7 +1,15 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
+import { UserRole } from "../../../constants.js";
 
 const super_admin = new mongoose.Schema({
+    id: {
+      type: String,
+      unique: true,
+      default: function () {
+        return this._id.toString();
+      },
+    },
     full_name:{
         type: String,
         required: true,
@@ -47,9 +55,10 @@ const super_admin = new mongoose.Schema({
         type: String
     },
     role: {
-        type: String,
-        required: true,
-        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
+      type: String,
+      required: true,
+      default: UserRole.SUPER_ADMIN,
+      enum: [UserRole.SUPER_ADMIN],
     },
     isProfileCompleted: {
         type: Boolean,

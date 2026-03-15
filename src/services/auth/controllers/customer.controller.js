@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../../../constants.js";
+import { options, UserRole } from "../../../constants.js";
 import { Customer } from "../models/customer.model.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import {
@@ -15,7 +15,7 @@ import {
 import { UserStatus } from "../../../constants.js";
 
 const registerUser = asyncHandler(async (req, res) => {
-  const { full_name, email, phone_number, country_code, password, gender, dateOfBirth, bio, driving_license_number } = req.body;
+  const { full_name, email, phone_number, country_code, password, driving_license_number, role } = req.body;
 
   // Validate required fields
   if ([full_name, email, phone_number, country_code, password, driving_license_number].some((field) => field?.trim() === "")) {
@@ -28,6 +28,10 @@ const registerUser = asyncHandler(async (req, res) => {
 
   if (password.length < 6) {
     throw new ApiError(400, "Password must be at least 6 characters long");
+  }
+
+  if (role && role !== UserRole.CUSTOMER) {
+    throw new ApiError(400, "Invalid role specified for customer registration");
   }
 
   if (driving_license_number.length !== 15) {
@@ -60,9 +64,10 @@ const registerUser = asyncHandler(async (req, res) => {
     country_code: country_code,
     password: password, // Will be hashed by pre-save hook
     status: UserStatus.PENDING,
-    gender: gender || null,
-    dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
-    bio: bio || null,
+    driving_license_number: driving_license_number,
+    gender: null,
+    dateOfBirth: null,
+    bio: null,
     isVerified: false,
     isApproved: false,
     // Initialize empty customer profile

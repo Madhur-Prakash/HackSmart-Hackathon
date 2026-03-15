@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../../../constants.js";
+import { options, UserRole } from "../../../constants.js";
 import {Staff} from "../models/staff.model.js"
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { create_access_token, 
@@ -18,7 +18,7 @@ const registerUser = asyncHandler( async (req, res) => {
     if([full_name, email, phone_number, addhar_card_number, country_code, role].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
-    if (role !== "staff"){
+    if (role && role !== UserRole.STAFF){
         throw new ApiError(400, "Invalid role")
     }
     if(!email.includes("@")){
@@ -42,7 +42,7 @@ const registerUser = asyncHandler( async (req, res) => {
       }
     }
 
-    // auto generating the password for regional admin
+    // auto generating the password for staff
     const password = user_name + Math.floor(Math.random() * 1000000) 
     // hash the password
     const salt = await bcrypt.genSalt(10); // generate a salt

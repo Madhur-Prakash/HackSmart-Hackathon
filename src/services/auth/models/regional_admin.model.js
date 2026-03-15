@@ -1,6 +1,19 @@
 import mongoose from "mongoose";
+import { UserRole } from "../../../constants.js";
 
 const regional_admin = new mongoose.Schema({
+    id: {
+      type: String,
+      unique: true,
+      default: function () {
+        return this._id.toString();
+      },
+    },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company",
+        required: true
+     },
     full_name:{
         type: String,
         required: true,
@@ -54,9 +67,10 @@ const regional_admin = new mongoose.Schema({
         type: String
     },
     role: {
-        type: String,
-        required: true,
-        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
+      type: String,
+      required: true,
+      default: UserRole.REGIONAL_ADMIN,
+      enum: [UserRole.REGIONAL_ADMIN],
     },
     isProfileCompleted: {
         type: Boolean,

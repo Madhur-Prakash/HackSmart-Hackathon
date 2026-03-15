@@ -2,7 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { options } from "../../../constants.js";
+import { options, UserRole } from "../../../constants.js";
 import {Company} from "../models/company.models.js"
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
@@ -13,7 +13,7 @@ const registerUser = asyncHandler( async (req, res) => {
     if([full_name, email, phone_number, country_code, role, password].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
-    if (role !== "super_admin"){
+    if (role && role !== UserRole.SUPER_ADMIN){
         throw new ApiError(400, "Invalid role")
     }
     if(!email.includes("@")){
@@ -44,7 +44,6 @@ const registerUser = asyncHandler( async (req, res) => {
         email: email,
         phone_number: phone_number,
         country_code: country_code,
-        role: role,
         password: password
     })
     if(!new_user){

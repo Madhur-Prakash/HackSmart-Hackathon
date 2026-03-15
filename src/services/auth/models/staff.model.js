@@ -1,11 +1,29 @@
 import mongoose from "mongoose";
+import { UserRole } from "../../../constants.js";
 
 const staff = new mongoose.Schema({
+    id: {
+      type: String,
+      unique: true,
+      default: function () {
+        return this._id.toString();
+      },
+    },
     full_name:{
         type: String,
         required: true,
         minlength: 5,
         trim: true
+    },
+    company_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Company",
+        required: true
+    },
+    regional_admin_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "RegionalAdmin",
+        required: true
     },
     email: {
         type: String,
@@ -54,9 +72,10 @@ const staff = new mongoose.Schema({
         type: String
     },
     role: {
-        type: String,
-        required: true,
-        enum: ["super_admin", "staff", "regional_admin", "transporter", "customer"]
+      type: String,
+      required: true,
+      default: UserRole.STAFF,
+      enum: [UserRole.STAFF],
     },
     isProfileCompleted: {
         type: Boolean,

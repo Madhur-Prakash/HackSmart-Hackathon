@@ -7,7 +7,7 @@ import {
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { email, bio, phone_number, country_code } = req.body;
+  const { email, bio, phone_number, country_code, gender, dateOfBirth } = req.body;
 
   if ( !email) {
     throw new ApiError(400, "Email is required");
@@ -15,6 +15,18 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
   const user = req.user;
   user.email = email;
+
+  // check for only once changeable fields and if they are being updated then throw error
+  if (user.dateOfBirth !== null) {
+    throw new ApiError(400, "Date of Birth cannot be changed once set");
+  }
+  if (user.gender !== null) {
+    throw new ApiError(400, "Gender cannot be changed once set");
+  }
+
+  // set the updated fields
+  if (dateOfBirth) user.dateOfBirth = new Date(dateOfBirth);
+  if (gender) user.gender = gender;
   if (bio) user.bio = bio;
   if (phone_number && !country_code) {
           throw new ApiError(400, "Country code is required when phone number is provided")
