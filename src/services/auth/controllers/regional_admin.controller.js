@@ -11,11 +11,12 @@ import { create_access_token,
     isPasswordCorrect,
     sendEmail
 } from "../../../utils/helper.js";
+import { Company } from "../models/company.models.js";
 
 const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, phone_number, addhar_card_number, country_code, role} = req.body
+    const {full_name, email, phone_number, addhar_card_number, country_code, company_id, role} = req.body
 
-    if([full_name, email, phone_number, addhar_card_number, country_code, role].some((field) => field?.trim() === "")){
+    if([full_name, email, phone_number, addhar_card_number, country_code, company_id, role].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
     if (role && role !== UserRole.REGIONAL_ADMIN){
@@ -23,6 +24,10 @@ const registerUser = asyncHandler( async (req, res) => {
     }
     if(!email.includes("@")){
         throw new ApiError(400, "Email is not valid")
+    }
+    const existing_company = await Company.findById(company_id)
+    if(!existing_company){
+        throw new ApiError(400, "Company doesn't exist")
     }
     let user_name;
     const existing_user = await RegionalAdmin.findOne({"email": email})
@@ -56,6 +61,7 @@ const registerUser = asyncHandler( async (req, res) => {
         phone_number: phone_number,
         addhar_card_number: addhar_card_number,
         country_code: country_code,
+        company_id: company_id,
         password: hashed_password
     })
     if(!new_user){
