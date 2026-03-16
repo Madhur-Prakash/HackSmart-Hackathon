@@ -15,7 +15,7 @@ const options = {
         description: "Development server",
       },
       {
-        url: "https://plays-sue-isolated-clinton.trycloudflare.com",
+        url: "https://infrared-chapters-trustees-limitation.trycloudflare.com",
         description: "Production server",
       }
     ],
