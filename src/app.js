@@ -30,7 +30,7 @@ app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 app.get("/", (req, res) => {
     res.status(200).json({
         "message": "Welcome to NavSwap API. Please refer to the documentation for more details.",
-        "documentation": "http://localhost:8000/docs",
+        "documentation": "Available at /docs",
         "Server Status": "Running",
         "API Version": "1.0.0",
         "Author": "Team NavSwap"
