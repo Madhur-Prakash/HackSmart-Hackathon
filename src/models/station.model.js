@@ -25,7 +25,7 @@ const station = new mongoose.Schema({
         ref: "Company",
         required: true
     },
-    name: {
+    station_name: {
         type: String,
         required: true,
         trim: true
@@ -110,4 +110,4 @@ station.pre("save", async function (next) {
 });
 
 station.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
-export default mongoose.model("Station", station);
+export const Station = mongoose.model("Station", station);

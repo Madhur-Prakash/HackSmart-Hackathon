@@ -65,9 +65,7 @@ const registerUser = asyncHandler( async (req, res) => {
     
     // generate access and refresh token
     const access_token = create_access_token(new_user._id, new_user.user_name);
-    console.log("Access token generated:", access_token);
     const refresh_token = create_refresh_token(new_user._id);
-    console.log("Refresh token generated:", refresh_token);
 
     //  set encryted refresh token in user document
     const salt = await bcrypt.genSalt(10); // generate a salt

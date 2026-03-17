@@ -54,6 +54,9 @@ import ProfileUpdateRegionalAdminRouter from "./services/user/routes/regional_ad
 import ProfileUpdateCustomerRouter from "./services/user/routes/customer.router.js";
 import UserHealthCheck from './services/user/routes/healthcheck.router.js';
 
+// station routes
+import StationHealthCheck from "./services/station/routes/healthcheck.router.js"
+import StationRouter from "./services/station/routes/station.route.js"
 
 // routes declaration
 // auth routes
@@ -72,4 +75,7 @@ app.use("/api/v1/user/customer", ProfileUpdateCustomerRouter)
 app.use("/api/v1/user/transporter", ProfileUpdateTransporterRouter)
 app.use("/api/v1/user", UserHealthCheck)
 
+// station routes
+app.use("/api/v1/station/health", StationHealthCheck)
+app.use("/api/v1/station", StationRouter)
 export {app}
