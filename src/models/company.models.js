@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { UserRole } from "../constants.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const super_admin = new mongoose.Schema({
     id: {
@@ -83,5 +84,6 @@ super_admin.pre("save", async function(next){  // normal func is used instead of
     next()
 })
 
+super_admin.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const Company = mongoose.model("Company", super_admin)
 // Company can directly contact mongoDB as it is made with the help of mongoose

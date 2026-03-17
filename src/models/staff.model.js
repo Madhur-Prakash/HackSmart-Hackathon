@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { UserRole } from "../constants.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const staff = new mongoose.Schema({
     id: {
@@ -15,6 +16,11 @@ const staff = new mongoose.Schema({
         minlength: 5,
         trim: true
     },
+    station_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Station",
+        required: true
+     },
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Company",
@@ -87,5 +93,6 @@ const staff = new mongoose.Schema({
 })
 
 
+staff.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const Staff = mongoose.model("Staff", staff)
 // Staff can directly contact mongoDB as it is made with the help of mongoose

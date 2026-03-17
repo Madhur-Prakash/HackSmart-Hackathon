@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { TransporterProfileSchema } from "./schemas/profileSchemas.js";
 import { UserRole, UserStatus, Gender } from "../constants.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const transporter = new mongoose.Schema(
   {
@@ -115,5 +116,6 @@ transporter.pre("save", async function (next) {
   next();
 });
 
+transporter.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const Transporter = mongoose.model("Transporter", transporter);
 // Transporter can directly contact mongoDB as it is made with the help of mongoose

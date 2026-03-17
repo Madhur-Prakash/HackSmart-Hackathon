@@ -14,9 +14,9 @@ import { create_access_token,
 import { Company } from "../../../models/company.models.js";
 
 const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, phone_number, addhar_card_number, country_code, company_id, role} = req.body
+    const {full_name, email, phone_number, addhar_card_number, country_code, company_id, role, station_id} = req.body
 
-    if([full_name, email, phone_number, addhar_card_number, country_code, company_id, role].some((field) => field?.trim() === "")){
+    if([full_name, email, phone_number, addhar_card_number, country_code, company_id, role, station_id].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
     if (role && role !== UserRole.REGIONAL_ADMIN){
@@ -62,6 +62,7 @@ const registerUser = asyncHandler( async (req, res) => {
         addhar_card_number: addhar_card_number,
         country_code: country_code,
         company_id: company_id,
+        station_id: station_id,
         password: hashed_password
     })
     if(!new_user){

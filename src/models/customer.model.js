@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { CustomerProfileSchema } from "../models/schemas/profileSchemas.js";
 import { UserRole, UserStatus, Gender } from "../constants.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const customer = new mongoose.Schema(
   {
@@ -114,5 +115,6 @@ customer.pre("save", async function (next) {
   next();
 });
 
+customer.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const Customer = mongoose.model("Customer", customer);
 // Customer can directly contact mongoDB as it is made with the help of mongoose

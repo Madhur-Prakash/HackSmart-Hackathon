@@ -15,9 +15,9 @@ import { Company } from "../../../models/company.models.js";
 import { RegionalAdmin } from "../../../models/regional_admin.model.js";
 
 const registerUser = asyncHandler( async (req, res) => {
-    const {full_name, email, phone_number, addhar_card_number, country_code, role, company_id, regional_admin_id} = req.body
+    const {full_name, email, phone_number, addhar_card_number, country_code, role, company_id, regional_admin_id, station_id} = req.body
 
-    if([full_name, email, phone_number, addhar_card_number, country_code, role, company_id, regional_admin_id].some((field) => field?.trim() === "")){
+    if([full_name, email, phone_number, addhar_card_number, country_code, role, company_id, regional_admin_id, station_id].some((field) => field?.trim() === "")){
         throw new ApiError(400, "All fields are required")
     }
     if (role && role !== UserRole.STAFF){
@@ -69,6 +69,7 @@ const registerUser = asyncHandler( async (req, res) => {
         role: role,
         company_id: company_id,
         regional_admin_id: regional_admin_id,
+        station_id: station_id,
         password: hashed_password
     })
     if(!new_user){

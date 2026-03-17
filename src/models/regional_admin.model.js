@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { UserRole } from "../constants.js";
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 
 const regional_admin = new mongoose.Schema({
     id: {
@@ -12,6 +13,11 @@ const regional_admin = new mongoose.Schema({
     company_id: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Company",
+        required: true
+     },
+     station_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Station",
         required: true
      },
     full_name:{
@@ -81,5 +87,6 @@ const regional_admin = new mongoose.Schema({
     timestamps: true
 })
 
+regional_admin.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const RegionalAdmin = mongoose.model("RegionalAdmin", regional_admin)
 // RegionalAdmin can directly contact mongoDB as it is made with the help of mongoose
