@@ -3,7 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options, UserRole } from "../../../constants.js";
-import {RegionalAdmin} from "../models/regional_admin.model.js"
+import {RegionalAdmin} from "../../../models/regional_admin.model.js"
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { create_access_token,
     create_refresh_token,
@@ -11,7 +11,7 @@ import { create_access_token,
     isPasswordCorrect,
     sendEmail
 } from "../../../utils/helper.js";
-import { Company } from "../models/company.models.js";
+import { Company } from "../../../models/company.models.js";
 
 const registerUser = asyncHandler( async (req, res) => {
     const {full_name, email, phone_number, addhar_card_number, country_code, company_id, role} = req.body

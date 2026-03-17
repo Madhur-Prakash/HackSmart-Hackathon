@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import { TransporterProfileSchema } from "../schemas/profileSchemas.js";
-import { UserRole, UserStatus, Gender } from "../../../constants.js";
+import { CustomerProfileSchema } from "../models/schemas/profileSchemas.js";
+import { UserRole, UserStatus, Gender } from "../constants.js";
 
-const transporter = new mongoose.Schema(
+const customer = new mongoose.Schema(
   {
     // Core User Fields
     id: {
@@ -57,13 +57,20 @@ const transporter = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      default: UserRole.TRANSPORTER,
-      enum: [UserRole.TRANSPORTER],
+      default: UserRole.CUSTOMER,
+      enum: [UserRole.CUSTOMER],
     },
     status: {
       type: String,
       default: UserStatus.PENDING,
       enum: Object.values(UserStatus),
+    },
+    driving_license_number: {
+      type: String,
+      minlength: 15,
+      maxlength: 15,
+      unique: true,
+      sparse: true,
     },
     avatar: {
       type: String,
@@ -90,16 +97,8 @@ const transporter = new mongoose.Schema(
     },
     lastLoginAt: Date,
 
-    driving_license_number: {
-      type: String,
-      minlength: 15,
-      maxlength: 15,
-      unique: true,
-      sparse: true,
-    },
-
-    // Transporter Profile
-    transporterProfile: TransporterProfileSchema,
+    // Customer Profile
+    customerProfile: CustomerProfileSchema,
   },
   {
     timestamps: true,
@@ -107,7 +106,7 @@ const transporter = new mongoose.Schema(
 );
 
 // Encrypting the password before saving
-transporter.pre("save", async function (next) {
+customer.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   const salt = await bcrypt.genSalt(10);
@@ -115,5 +114,5 @@ transporter.pre("save", async function (next) {
   next();
 });
 
-export const Transporter = mongoose.model("Transporter", transporter);
-// Transporter can directly contact mongoDB as it is made with the help of mongoose
+export const Customer = mongoose.model("Customer", customer);
+// Customer can directly contact mongoDB as it is made with the help of mongoose

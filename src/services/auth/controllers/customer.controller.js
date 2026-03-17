@@ -3,7 +3,7 @@ import { asyncHandler } from "../../../utils/asyncHandler.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { options, UserRole } from "../../../constants.js";
-import { Customer } from "../models/customer.model.js";
+import { Customer } from "../../../models/customer.model.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import {
   create_access_token,

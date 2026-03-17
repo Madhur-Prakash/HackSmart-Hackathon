@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { UserRole } from "../../../constants.js";
+import { UserRole } from "../constants.js";
 
 const staff = new mongoose.Schema({
     id: {

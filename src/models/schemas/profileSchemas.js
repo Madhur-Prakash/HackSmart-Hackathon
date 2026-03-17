@@ -3,7 +3,7 @@ import {
   SubscriptionPlan,
   VerificationStatus,
   TransporterTier,
-} from "../../../../src/constants.js";
+} from "../../constants.js";
 import TimeRangeSchema from "./timeRange.Schema.js";
 import { VerificationDocumentSchema } from "./verificationDocument.Schema.js";
 

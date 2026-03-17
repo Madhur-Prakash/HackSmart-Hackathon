@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { VerificationStatus } from "../../../constants.js";
+import { VerificationStatus } from "../../constants.js";
 
 const VerificationDocumentSchema = new mongoose.Schema(
   {

@@ -1,9 +1,9 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
-import { CustomerProfileSchema } from "../schemas/profileSchemas.js";
-import { UserRole, UserStatus, Gender } from "../../../constants.js";
+import { TransporterProfileSchema } from "./schemas/profileSchemas.js";
+import { UserRole, UserStatus, Gender } from "../constants.js";
 
-const customer = new mongoose.Schema(
+const transporter = new mongoose.Schema(
   {
     // Core User Fields
     id: {
@@ -57,20 +57,13 @@ const customer = new mongoose.Schema(
     role: {
       type: String,
       required: true,
-      default: UserRole.CUSTOMER,
-      enum: [UserRole.CUSTOMER],
+      default: UserRole.TRANSPORTER,
+      enum: [UserRole.TRANSPORTER],
     },
     status: {
       type: String,
       default: UserStatus.PENDING,
       enum: Object.values(UserStatus),
-    },
-    driving_license_number: {
-      type: String,
-      minlength: 15,
-      maxlength: 15,
-      unique: true,
-      sparse: true,
     },
     avatar: {
       type: String,
@@ -97,8 +90,16 @@ const customer = new mongoose.Schema(
     },
     lastLoginAt: Date,
 
-    // Customer Profile
-    customerProfile: CustomerProfileSchema,
+    driving_license_number: {
+      type: String,
+      minlength: 15,
+      maxlength: 15,
+      unique: true,
+      sparse: true,
+    },
+
+    // Transporter Profile
+    transporterProfile: TransporterProfileSchema,
   },
   {
     timestamps: true,
@@ -106,7 +107,7 @@ const customer = new mongoose.Schema(
 );
 
 // Encrypting the password before saving
-customer.pre("save", async function (next) {
+transporter.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
   const salt = await bcrypt.genSalt(10);
@@ -114,5 +115,5 @@ customer.pre("save", async function (next) {
   next();
 });
 
-export const Customer = mongoose.model("Customer", customer);
-// Customer can directly contact mongoDB as it is made with the help of mongoose
+export const Transporter = mongoose.model("Transporter", transporter);
+// Transporter can directly contact mongoDB as it is made with the help of mongoose

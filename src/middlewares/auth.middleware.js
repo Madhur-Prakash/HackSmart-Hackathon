@@ -1,8 +1,8 @@
-import { Company } from "../services/auth/models/company.models.js";
-import { Transporter } from "../services/auth/models/transporter.model.js";
-import { Staff } from "../services/auth/models/staff.model.js";
-import { Customer } from "../services/auth/models/customer.model.js";
-import { RegionalAdmin } from "../services/auth/models/regional_admin.model.js";
+import { Company } from "../models/company.models.js";
+import { Transporter } from "../models/transporter.model.js";
+import { Staff } from "../models/staff.model.js";
+import { Customer } from "../models/customer.model.js";
+import { RegionalAdmin } from "../models/regional_admin.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
