@@ -42,8 +42,34 @@ const station = new mongoose.Schema({
             type: [Number]// [longitude, latitude]
         }
     }
+    },
+    {
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
     }
 );
+
+// Forward relations for bidirectional access via populate.
+station.virtual("regionalAdmin", {
+    ref: "RegionalAdmin",
+    localField: "regional_admin_id",
+    foreignField: "_id",
+    justOne: true
+});
+
+station.virtual("company", {
+    ref: "Company",
+    localField: "company_id",
+    foreignField: "_id",
+    justOne: true
+});
+
+station.virtual("staffMembers", {
+    ref: "Staff",
+    localField: "_id",
+    foreignField: "station_id"
+});
 
 // add indexes for geospatial queries
 station.index({ location: "2dsphere" });

@@ -84,8 +84,23 @@ const regional_admin = new mongoose.Schema({
     }
 
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 })
+
+// Reverse relations for bidirectional access via populate.
+regional_admin.virtual("stations", {
+    ref: "Station",
+    localField: "_id",
+    foreignField: "regional_admin_id"
+});
+
+regional_admin.virtual("staffMembers", {
+    ref: "Staff",
+    localField: "_id",
+    foreignField: "regional_admin_id"
+});
 
 regional_admin.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
 export const RegionalAdmin = mongoose.model("RegionalAdmin", regional_admin)

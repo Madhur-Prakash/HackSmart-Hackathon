@@ -72,8 +72,29 @@ const super_admin = new mongoose.Schema({
     }
 
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 })
+
+// Reverse relations for bidirectional access via populate.
+super_admin.virtual("regionalAdmins", {
+    ref: "RegionalAdmin",
+    localField: "_id",
+    foreignField: "company_id"
+});
+
+super_admin.virtual("stations", {
+    ref: "Station",
+    localField: "_id",
+    foreignField: "company_id"
+});
+
+super_admin.virtual("staffMembers", {
+    ref: "Staff",
+    localField: "_id",
+    foreignField: "company_id"
+});
 
 //  encrypting the password before saving
 super_admin.pre("save", async function(next){  // normal func is used instead of callback func as callback func does not have access to `this` keyword

@@ -89,8 +89,32 @@ const staff = new mongoose.Schema({
     }
 
 }, {
-    timestamps: true
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 })
+
+// Forward relations for bidirectional access via populate.
+staff.virtual("station", {
+    ref: "Station",
+    localField: "station_id",
+    foreignField: "_id",
+    justOne: true
+});
+
+staff.virtual("company", {
+    ref: "Company",
+    localField: "company_id",
+    foreignField: "_id",
+    justOne: true
+});
+
+staff.virtual("regionalAdmin", {
+    ref: "RegionalAdmin",
+    localField: "regional_admin_id",
+    foreignField: "_id",
+    justOne: true
+});
 
 
 staff.plugin(mongooseAggregatePaginate) // enabling aggregation pipeline
