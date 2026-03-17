@@ -24,7 +24,7 @@ const router = Router()
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateAccountDetailsBody'
+ *             $ref: '#/components/schemas/UpdatePersonalAccountDetailsBody'
  *     responses:
  *       200:
  *         description: Transporter details updated successfully

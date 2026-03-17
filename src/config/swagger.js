@@ -86,7 +86,7 @@ const options = {
         },
         RegisterStaffBody: {
           type: "object",
-          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id", "regional_admin_id"],
+          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id", "regional_admin_id", "station_id"],
           properties: {
             full_name: { type: "string", example: "Staff Member" },
             email: { type: "string", format: "email", example: "staff@navswap.com" },
@@ -96,11 +96,12 @@ const options = {
             role: { type: "string", enum: ["staff"], example: "staff" },
             company_id: { type: "string", example: "60d21b4667d0d8992e610c84" },
             regional_admin_id: { type: "string", example: "60d21b4667d0d8992e610c85" },
+            station_id: { type: "string", example: "ST_60d21b4667d0d8992e610c86" },
           },
         },
         RegisterRegionalAdminBody: {
           type: "object",
-          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id"],
+          required: ["full_name", "email", "phone_number", "addhar_card_number", "country_code", "role", "company_id", "station_id"],
           properties: {
             full_name: { type: "string", example: "Regional Admin" },
             email: { type: "string", format: "email", example: "radmin@navswap.com" },
@@ -109,6 +110,29 @@ const options = {
             country_code: { type: "string", example: "+91" },
             role: { type: "string", enum: ["regional_admin"], example: "regional_admin" },
             company_id: { type: "string", example: "60d21b4667d0d8992e610c84" },
+            station_id: { type: "string", example: "ST_60d21b4667d0d8992e610c86" },
+          },
+        },
+        CreateStationBody: {
+          type: "object",
+          required: ["station_name", "station_address", "regional_admin_id", "company_id"],
+          properties: {
+            station_name: { type: "string", example: "NavSwap Pune Station 1" },
+            regional_admin_id: { type: "string", example: "60d21b4667d0d8992e610c85" },
+            company_id: { type: "string", example: "60d21b4667d0d8992e610c84" },
+            station_id: { type: "string", example: "ST_60d21b4667d0d8992e610c86" },
+            station_address: {
+              type: "object",
+              required: ["address_line1", "address_line2", "city", "state", "pin_code", "nearby_landmark"],
+              properties: {
+                address_line1: { type: "string", example: "Plot 12" },
+                address_line2: { type: "string", example: "MG Road" },
+                city: { type: "string", example: "Pune" },
+                state: { type: "string", example: "Maharashtra" },
+                pin_code: { type: "string", example: "411001" },
+                nearby_landmark: { type: "string", example: "Near Metro Station" },
+              },
+            },
           },
         },
         LoginBody: {
@@ -123,12 +147,27 @@ const options = {
         ChangePasswordBody: {
           type: "object",
           required: ["confirm_password", "new_password"],
+          anyOf: [
+            { required: ["email"] },
+            { required: ["user_name"] },
+          ],
           properties: {
             new_password: { type: "string", format: "password", example: "NewSecret@123" },
             confirm_password: { type: "string", format: "password", example: "NewSecret@123" },
+            email: { type: "string", format: "email", example: "user@example.com" },
+            user_name: { type: "string", example: "john_doe" },
           },
         },
-        UpdateAccountDetailsBody: {
+        UpdateBasicAccountDetailsBody: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: { type: "string", format: "email", example: "updated@example.com" },
+            phone_number: { type: "string", example: "9876543210" },
+            country_code: { type: "string", example: "+91" },
+          },
+        },
+        UpdatePersonalAccountDetailsBody: {
           type: "object",
           required: ["email"],
           properties: {
@@ -180,11 +219,13 @@ const options = {
       { name: "User — Transporter", description: "Transporter profile management (requires cookie auth)" },
       { name: "User — Staff", description: "Staff profile management (requires cookie auth)" },
       { name: "User — Regional Admin", description: "Regional Admin profile management (requires cookie auth)" },
+      { name: "Station", description: "Station management endpoints (requires cookie auth)" },
     ],
   },
   apis: [
     "./src/services/auth/routes/*.js",
     "./src/services/user/routes/*.js",
+    "./src/services/station/routes/*.js",
   ],
 };
 

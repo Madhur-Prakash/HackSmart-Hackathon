@@ -19,6 +19,6 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/ApiResponse'
  */
-router.route('/').get(StationHealthCheck);
+router.route('/health').get(StationHealthCheck);
 
 export default router

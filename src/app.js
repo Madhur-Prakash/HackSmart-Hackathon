@@ -76,6 +76,6 @@ app.use("/api/v1/user/transporter", ProfileUpdateTransporterRouter)
 app.use("/api/v1/user", UserHealthCheck)
 
 // station routes
-app.use("/api/v1/station/health", StationHealthCheck)
-app.use("/api/v1/station", StationRouter)
+app.use("/api/v1/station", StationHealthCheck) // healthcheck
+app.use("/api/v1/station", StationRouter) // station management route
 export {app}

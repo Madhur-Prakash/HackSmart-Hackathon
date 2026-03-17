@@ -23,7 +23,7 @@ const router = Router()
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/UpdateAccountDetailsBody'
+ *             $ref: '#/components/schemas/UpdateBasicAccountDetailsBody'
  *     responses:
  *       200:
  *         description: Regional admin details updated successfully
