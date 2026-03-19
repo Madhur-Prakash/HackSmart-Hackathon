@@ -15,7 +15,7 @@ const options = {
         description: "Development server",
       },
       {
-        url: "https://infrared-chapters-trustees-limitation.trycloudflare.com",
+        url: "https://donor-franklin-vincent-commitments.trycloudflare.com/",
         description: "Production server",
       }
     ],
