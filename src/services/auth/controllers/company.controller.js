@@ -72,8 +72,7 @@ const registerUser = asyncHandler( async (req, res) => {
     const hashed_refresh_token = await bcrypt.hash(refresh_token, salt); // hash the refresh token
     new_user.refresh_token = hashed_refresh_token; // set refresh token in user document
     await new_user.save({validateBeforeSave: false}); // save the user without validating the user schema again
-
-    console.log("new_user:", user_data);
+    
     return res.status(201).cookie("access_token", access_token, options).cookie("refresh_token", refresh_token, options).json(
         new ApiResponse(201, 
             {
