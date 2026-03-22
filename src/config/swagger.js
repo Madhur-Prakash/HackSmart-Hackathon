@@ -15,7 +15,7 @@ const options = {
         description: "Development server",
       },
       {
-        url: "https://donor-franklin-vincent-commitments.trycloudflare.com/",
+        url: "https://paragraphs-songs-higher-quite.trycloudflare.com/",
         description: "Production server",
       }
     ],
