@@ -6,6 +6,7 @@ import { options, UserRole } from "../../../constants.js";
 import {Company} from "../../../models/company.models.js"
 import { ApiResponse } from "../../../utils/ApiResponse.js";
 import { create_access_token, create_refresh_token, generateUsername, isPasswordCorrect } from "../../../utils/helper.js";
+import { appConsole as console } from "../../../utils/logger.js";
 
 const registerUser = asyncHandler( async (req, res) => {
     const {full_name, email, phone_number, country_code, role, password} = req.body

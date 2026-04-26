@@ -5,6 +5,7 @@ import {
   deleteFromCloudinary,
 } from "../../../utils/cloudinary.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
+import { appConsole as console } from "../../../utils/logger.js";
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
   const { email, bio, phone_number, country_code, gender, dateOfBirth } = req.body;

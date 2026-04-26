@@ -6,6 +6,7 @@ import { RegionalAdmin } from "../models/regional_admin.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
+import logger from "../utils/logger.js";
 
 const CompanyJWTVerify = asyncHandler(async (req, _, next) => { // replace res by _ as we are not using it in this middleware
     try {
@@ -13,7 +14,7 @@ const CompanyJWTVerify = asyncHandler(async (req, _, next) => { // replace res b
         if(!access_token){
             throw new ApiError(401, "Unauthorized request")
         }
-        console.log("Access token received in middleware");
+        logger.info("Access token received in middleware");
         
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
@@ -21,7 +22,7 @@ const CompanyJWTVerify = asyncHandler(async (req, _, next) => { // replace res b
         const user = await Company.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("Company found:", user.user_name);
+        logger.info({ user_name: user.user_name }, "Company found");
     
         req.user = user;  // attach user to request object
         next()
@@ -37,7 +38,7 @@ const CustomerJWTVerify = asyncHandler(async (req, _, next) => { // replace res 
         if(!access_token){
             throw new ApiError(401, "Unauthorized request")
         }
-        console.log("Access token received in middleware");
+        logger.info("Access token received in middleware");
         
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
@@ -45,7 +46,7 @@ const CustomerJWTVerify = asyncHandler(async (req, _, next) => { // replace res 
         const user = await Customer.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("Customer found:", user.user_name);
+        logger.info({ user_name: user.user_name }, "Customer found");
     
         req.user = user;  // attach user to request object
         next()
@@ -60,7 +61,7 @@ const RegionalAdminJWTVerify = asyncHandler(async (req, _, next) => { // replace
         if(!access_token){
             throw new ApiError(401, "Unauthorized request")
         }
-        console.log("Access token received in middleware");
+        logger.info("Access token received in middleware");
         
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
@@ -68,7 +69,7 @@ const RegionalAdminJWTVerify = asyncHandler(async (req, _, next) => { // replace
         const user = await RegionalAdmin.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("Regional Admin found:", user.user_name);
+        logger.info({ user_name: user.user_name }, "Regional Admin found");
     
         req.user = user;  // attach user to request object
         next()
@@ -83,7 +84,7 @@ const TransporterJWTVerify = asyncHandler(async (req, _, next) => { // replace r
         if(!access_token){
             throw new ApiError(401, "Unauthorized request")
         }
-        console.log("Access token received in middleware");
+        logger.info("Access token received in middleware");
         
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
@@ -91,7 +92,7 @@ const TransporterJWTVerify = asyncHandler(async (req, _, next) => { // replace r
         const user = await Transporter.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("Transporter found:", user.user_name);
+        logger.info({ user_name: user.user_name }, "Transporter found");
     
         req.user = user;  // attach user to request object
         next()
@@ -106,7 +107,7 @@ const StaffJWTVerify = asyncHandler(async (req, _, next) => { // replace res by 
         if(!access_token){
             throw new ApiError(401, "Unauthorized request")
         }
-        console.log("Access token received in middleware");
+        logger.info("Access token received in middleware");
         
     
         const decoded_info = jwt.verify(access_token, process.env.ACESS_TOKEN_SECRET)
@@ -114,7 +115,7 @@ const StaffJWTVerify = asyncHandler(async (req, _, next) => { // replace res by 
         const user = await Staff.findById(decoded_info?._id).select("-password -refresh_token")
         if (!user) {
                 throw new ApiError(401, "Invalid Access Token")}
-        console.log("Staff found:", user.user_name);
+        logger.info({ user_name: user.user_name }, "Staff found");
     
         req.user = user;  // attach user to request object
         next()

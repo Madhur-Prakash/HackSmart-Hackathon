@@ -13,6 +13,7 @@ import {
   sendEmail
 } from "../../../utils/helper.js";
 import { UserStatus } from "../../../constants.js";
+import { appConsole as console } from "../../../utils/logger.js";
 
 const registerUser = asyncHandler(async (req, res) => {
   const { full_name, email, phone_number, country_code, password, driving_license_number, role } = req.body;

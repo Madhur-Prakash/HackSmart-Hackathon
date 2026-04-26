@@ -205,6 +205,27 @@ const options = {
             emergencyContact: { type: "object", example: { name: "Jane Doe", phone: "9876543210" } },
           },
         },
+        GenerateQrBody: {
+          type: "object",
+          required: ["data"],
+          properties: {
+            data: {
+              type: "object",
+              additionalProperties: true,
+              example: {
+                user_id: "usr_1234",
+                station_id: "stn_987",
+                purpose: "check_in",
+              },
+            },
+            ttl: {
+              type: "integer",
+              minimum: 1,
+              example: 60,
+              description: "Time to live in seconds",
+            },
+          },
+        },
       },
     },
     tags: [
@@ -220,12 +241,14 @@ const options = {
       { name: "User — Staff", description: "Staff profile management (requires cookie auth)" },
       { name: "User — Regional Admin", description: "Regional Admin profile management (requires cookie auth)" },
       { name: "Station", description: "Station management endpoints (requires cookie auth)" },
+      { name: "QR", description: "QR generation, retrieval, and verification endpoints backed by Redis" },
     ],
   },
   apis: [
     "./src/services/auth/routes/*.js",
     "./src/services/user/routes/*.js",
     "./src/services/station/routes/*.js",
+    "./src/services/qr/routes/*.js",
   ],
 };
 

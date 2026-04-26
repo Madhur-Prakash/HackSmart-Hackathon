@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import stationAdressSchema from "./schemas/stationSchema.js";
 import node_geocoder from "node-geocoder";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
+import { appConsole as console } from "../utils/logger.js";
 
 const geoCoder = node_geocoder({
     provider: 'openstreetmap'

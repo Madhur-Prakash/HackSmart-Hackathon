@@ -3,6 +3,8 @@ import cors from "cors";
 import cookieParser from 'cookie-parser';
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
+import morgan from "morgan";
+import logger from "./utils/logger.js";
 //  ===================================
 //  NOTE: This file is the main entry point of the application
 //  ===================================
@@ -22,6 +24,11 @@ app.use(express.json({limit: "20kb"})) // this is done to limit the size of the 
 app.use(express.urlencoded({extended: false, limit: "20kb"})) // this is done to limit the size of the urlencoded request body, // express.urlencoded() is used to parse form data in the request body
 app.use(express.static("public")) // this is done to serve static files from the public directory
 app.use(cookieParser()) // this is done to parse cookies from the request
+app.use(morgan("combined", {
+    stream: {
+        write: (message) => logger.info(message.trim())
+    }
+})); // this is done to log the requests in the combined format (Apache style)
 
 // swagger documentation route
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
@@ -57,6 +64,7 @@ import UserHealthCheck from './services/user/routes/healthcheck.router.js';
 // station routes
 import StationHealthCheck from "./services/station/routes/healthcheck.router.js"
 import StationRouter from "./services/station/routes/station.route.js"
+import QrRouter from "./services/qr/routes/qr.router.js";
 
 // routes declaration
 // auth routes
@@ -78,6 +86,9 @@ app.use("/api/v1/user", UserHealthCheck)
 // station routes
 app.use("/api/v1/station", StationHealthCheck) // healthcheck
 app.use("/api/v1/station", StationRouter) // station management route
+
+// qr routes
+app.use("/api/v1/qr", QrRouter)
 
 
 export {app}

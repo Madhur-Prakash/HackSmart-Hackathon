@@ -2,6 +2,7 @@ import { ApiError } from "../../../utils/ApiError.js";
 import { asyncHandler } from "../../../utils/asyncHandler.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../../../utils/cloudinary.js";
 import { ApiResponse } from "../../../utils/ApiResponse.js";
+import { appConsole as console } from "../../../utils/logger.js";
 
 const updateAccountDetails = asyncHandler(async(req, res) => {
     const {email, phone_number, country_code} = req.body

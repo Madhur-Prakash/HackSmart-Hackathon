@@ -1,4 +1,5 @@
 import Redis from "ioredis";
+import logger from "../utils/logger.js";
 
 let redis_client;
 const connectRedis = async () => {
@@ -17,12 +18,12 @@ const connectRedis = async () => {
         });
         
         redis_client.on("error", (error) => {
-            console.log(`Redis error: ${error}`);
+            logger.error({ error }, "Redis client error");
         });
 
         return redis_client;
     } catch (error) {
-        console.log(`Error in connecting to Redis: ${error}`);
+        logger.error({ error }, "Error in connecting to Redis");
         process.exit(1);
     }
 }

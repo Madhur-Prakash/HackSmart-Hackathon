@@ -1,6 +1,7 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs" // file system for node js
 import { ApiError } from "./ApiError.js";
+import logger from "./logger.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -18,7 +19,7 @@ const uploadOnCloudinary = async (file_path) => {
          const response = await cloudinary.uploader.upload(file_path, {
             resource_type: "auto"
         })
-        console.log("File uploaded on cloudinary", response.url);
+        logger.info({ url: response.url }, "File uploaded on cloudinary");
         fs.unlinkSync(file_path) // remove the localy saved file after upload operation is successful
         return response
     } catch (error) {
@@ -37,7 +38,7 @@ const extractPublicIdFromUrl = (url) => {
         // Find the upload segment and everything after it
         const uploadMatch = cleanUrl.match(/\/upload\/(.+)$/);
         if (!uploadMatch) {
-            console.log("No upload segment found in URL");
+            logger.warn("No upload segment found in URL");
             return null;
         }
         
@@ -51,7 +52,7 @@ const extractPublicIdFromUrl = (url) => {
         return publicId || null;
         
     } catch (error) {
-        console.error("Error extracting public_id from URL:", error);
+        logger.error({ error }, "Error extracting public_id from URL");
         return null;
     }
 };
@@ -67,16 +68,16 @@ const deleteFromCloudinary = async (image_url) => {
         if (!public_id) {
             throw new ApiError(400, "Invalid Cloudinary URL format");
         }
-        console.log("Attempting to delete file with public_id:", public_id);
+        logger.info({ public_id }, "Attempting to delete file with public_id");
         // delete from cloudinary
-        console.log("Starting Cloudinary delete operation for public_id:", public_id);
+        logger.info({ public_id }, "Starting Cloudinary delete operation");
         const response = await cloudinary.uploader.destroy(public_id, {
             resource_type: "image"
         })
         return response
         
     } catch (error) {
-        console.error(error);
+        logger.error({ error }, "Error while deleting file from cloudinary");
         throw new ApiError(500, "Error while deleting file from cloudinary");
     }
 }

@@ -6,4 +6,5 @@ dist/
 coverage/
 .nyc_output/
 *.tsbuildinfo
-qrcodes
+generated_qr
+*.txt

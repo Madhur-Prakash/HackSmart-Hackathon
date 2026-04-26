@@ -12,6 +12,7 @@ import { create_access_token,
     sendEmail
 } from "../../../utils/helper.js";
 import { Company } from "../../../models/company.models.js";
+import { appConsole as console } from "../../../utils/logger.js";
 
 const registerUser = asyncHandler( async (req, res) => {
     const {full_name, email, phone_number, addhar_card_number, country_code, company_id, role, station_id} = req.body
